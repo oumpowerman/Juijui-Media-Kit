@@ -164,7 +164,7 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
           y: ambientSpotlightY,
           opacity: ambientSpotlightOpacity,
         }}
-        className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] sm:w-[1100px] h-[650px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.24)_0%,rgba(99,102,241,0.12)_45%,transparent_70%)] blur-3xl select-none"
+        className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[850px] sm:w-[1100px] 2xl:w-[1450px] h-[650px] rounded-full bg-[radial-gradient(circle,rgba(139,92,246,0.24)_0%,rgba(99,102,241,0.12)_45%,transparent_70%)] blur-3xl select-none"
       />
 
       {/* 3. Subtle Warm Studio Rim Light (Right-side warm reflection) */}
@@ -189,7 +189,7 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
       {/* Left Full-Height Film Strip with Top/Bottom Gradient Mask Feathering */}
       <div
         aria-hidden="true"
-        className="hidden xl:block pointer-events-none absolute left-3 2xl:left-6 inset-y-0 w-9 select-none overflow-hidden"
+        className="hidden xl:block pointer-events-none absolute left-1 2xl:left-2 inset-y-0 w-8 2xl:w-9 select-none overflow-hidden"
         style={{
           maskImage:
             'linear-gradient(to bottom, transparent 0%, black 140px, black calc(100% - 140px), transparent 100%)',
@@ -216,7 +216,7 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
       {/* Right Full-Height Film Strip with Top/Bottom Gradient Mask Feathering */}
       <div
         aria-hidden="true"
-        className="hidden xl:block pointer-events-none absolute right-3 2xl:right-6 inset-y-0 w-9 select-none overflow-hidden"
+        className="hidden xl:block pointer-events-none absolute right-1 2xl:right-2 inset-y-0 w-8 2xl:w-9 select-none overflow-hidden"
         style={{
           maskImage:
             'linear-gradient(to bottom, transparent 0%, black 140px, black calc(100% - 140px), transparent 100%)',
@@ -258,7 +258,7 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
         className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-[#FAFAFC] via-[#FAFAFC]/30 to-transparent select-none z-1"
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-7">
+      <div className="relative z-10 w-full max-w-7xl xl:max-w-[94vw] 2xl:max-w-[95vw] min-[2400px]:max-w-[2280px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12 space-y-7 2xl:space-y-9">
         {/* Top Row: Section Header + Add Clip CTA */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <motion.div
@@ -654,7 +654,7 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 2xl:gap-7">
                   <AnimatePresence mode="popLayout">
                     {horizontalFiltered.map((item, idx) => {
                       const imgSrc = item.driveImageUrl
@@ -828,7 +828,7 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6 2xl:gap-7">
                   <AnimatePresence mode="popLayout">
                     {verticalFiltered.map((item, idx) => {
                       const imgSrc = item.driveImageUrl

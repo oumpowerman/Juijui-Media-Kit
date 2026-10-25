@@ -49,7 +49,7 @@ export const MediaLightboxModal: React.FC<MediaLightboxModalProps> = ({
             exit={{ opacity: 0, y: 40, scale: 0.94 }}
             transition={{ duration: 0.48, ease: EASE_OUT_EXPO }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white border border-slate-200 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden grid grid-cols-1 md:grid-cols-12 shadow-2xl"
+            className="bg-white border border-slate-200 rounded-2xl w-full max-w-4xl 2xl:max-w-5xl max-h-[90vh] overflow-hidden grid grid-cols-1 md:grid-cols-12 shadow-2xl"
           >
             {/* Left: Visual Media Preview (Slides in from Left) */}
             <motion.div

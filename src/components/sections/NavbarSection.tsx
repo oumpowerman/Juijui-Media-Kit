@@ -263,7 +263,7 @@ export const NavbarSection: React.FC<NavbarSectionProps> = ({
     >
       <div
         ref={rowContainerRef}
-        className="max-w-7xl mx-auto px-3 sm:px-5 lg:px-8 h-15 flex items-center justify-between gap-2 overflow-hidden"
+        className="w-full max-w-7xl xl:max-w-[94vw] 2xl:max-w-[95vw] min-[2400px]:max-w-[2280px] mx-auto px-3 sm:px-5 lg:px-8 xl:px-6 2xl:px-8 h-15 2xl:h-16 flex items-center justify-between gap-2 overflow-hidden"
       >
         {/* ZONE 1: Brand Identity (Auto-adapts width based on densityTier) */}
         <a
@@ -322,7 +322,7 @@ export const NavbarSection: React.FC<NavbarSectionProps> = ({
         {densityTier !== 'mobile' && (
           <nav
             aria-label="เมนูหลัก"
-            className="flex items-center gap-0.5 p-1 rounded-2xl bg-slate-100/90 border border-slate-200/80 shrink-0"
+            className="flex items-center gap-0.5 2xl:gap-1 p-1 2xl:p-1.5 rounded-2xl bg-slate-100/90 border border-slate-200/80 shrink-0"
           >
             {NAV_ITEMS.map((item) => {
               const isActive = activeSection === item.id;
@@ -335,7 +335,7 @@ export const NavbarSection: React.FC<NavbarSectionProps> = ({
                   href={item.href}
                   onClick={(e) => handleNavClick(e, item.id)}
                   title={item.longLabel}
-                  className={`relative px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                  className={`relative px-2.5 2xl:px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     isActive
                       ? 'text-white'
                       : 'text-slate-600 hover:text-violet-800 hover:bg-white/70'

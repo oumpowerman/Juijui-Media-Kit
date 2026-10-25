@@ -122,10 +122,10 @@ export const BrandInfiniteStream: React.FC<BrandInfiniteStreamProps> = ({
   const [isExiting, setIsExiting] = useState(false);
   const exitTimerRef = useRef<number | null>(null);
 
-  // Ensure enough items in one cycle so wide viewports never see a seam gap
+  // Ensure enough items in one cycle so wide & ultrawide (2560px–3840px+) viewports never see a seam gap
   const singleSet = useMemo(() => {
     if (brands.length === 0) return [];
-    const minCount = 28;
+    const minCount = 44;
     const repeated: BrandCollaborationItem[] = [];
     while (repeated.length < minCount) {
       repeated.push(...brands);
@@ -251,10 +251,10 @@ export const BrandInfiniteStream: React.FC<BrandInfiniteStreamProps> = ({
       className="relative w-full bg-transparent py-2.5 overflow-visible select-none"
     >
       {/* Soft Left Edge Fade Mask */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-14 sm:w-28 bg-linear-to-r from-[#FAFAFC] via-[#FAFAFC]/85 to-transparent z-20" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-14 sm:w-28 2xl:w-44 bg-linear-to-r from-[#FAFAFC] via-[#FAFAFC]/85 to-transparent z-20" />
 
       {/* Soft Right Edge Fade Mask */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-14 sm:w-28 bg-linear-to-l from-[#FAFAFC] via-[#FAFAFC]/85 to-transparent z-20" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-14 sm:w-28 2xl:w-44 bg-linear-to-l from-[#FAFAFC] via-[#FAFAFC]/85 to-transparent z-20" />
 
       {/* Clipped Horizontal Conveyor Track */}
       <div className="w-full overflow-hidden">

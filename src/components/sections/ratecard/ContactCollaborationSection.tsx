@@ -46,8 +46,8 @@ export const ContactCollaborationSection: React.FC<ContactCollaborationSectionPr
 
   return (
     <section id="contact" className="py-16 bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-linear-to-br from-[#F5F3FF] via-white to-[#FDF2F8] border border-slate-200/90 rounded-2xl p-6 sm:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="w-full max-w-7xl xl:max-w-[94vw] 2xl:max-w-[95vw] min-[2400px]:max-w-[2280px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-6 2xl:px-8">
+        <div className="bg-linear-to-br from-[#F5F3FF] via-white to-[#FDF2F8] border border-slate-200/90 rounded-2xl p-6 sm:p-10 2xl:p-12 grid grid-cols-1 lg:grid-cols-12 gap-8 2xl:gap-12 items-center">
           {/* Left Contact Channels (Slides from Left on every scroll) */}
           <motion.div
             initial="hidden"
@@ -201,7 +201,7 @@ export const ContactCollaborationSection: React.FC<ContactCollaborationSectionPr
             <motion.div
               whileHover={{ scale: 1.02 }}
               transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-              className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm aspect-[4/4] max-h-[380px] mx-auto"
+              className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm aspect-[4/4] max-h-[380px] 2xl:max-h-[420px] mx-auto"
             >
               <img
                 src={currentCreator.portraitUrl}

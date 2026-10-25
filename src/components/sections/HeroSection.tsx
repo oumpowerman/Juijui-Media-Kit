@@ -100,7 +100,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           />
         </motion.div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 w-full max-w-7xl xl:max-w-[94vw] 2xl:max-w-[95vw] min-[2400px]:max-w-[2280px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-6 2xl:px-8">
           {/* Multi-Creator Roster Switcher */}
           <motion.div
             initial="hidden"
@@ -173,7 +173,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </motion.div>
 
           {/* 2-Column Hero Split with Layered Frosted Glass & Floating Motion */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 2xl:gap-10 items-stretch">
             <HeroLeftBrandCard
               currentCreator={currentCreator}
               parallaxY={leftCardParallaxY}
@@ -195,7 +195,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             initial="hidden"
             whileInView="visible"
             viewport={REPEAT_VIEWPORT}
-            className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-4"
+            className="mt-6 2xl:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4 2xl:gap-6"
           >
             {[
               {
@@ -243,7 +243,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   custom={idx * 0.07}
                   whileHover={{ y: -5 }}
                   transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-                  className="bg-white/88 backdrop-blur-md border border-white/95 rounded-2xl p-4 sm:p-5 hover:border-violet-300 transition-all shadow-[0_12px_28px_-8px_rgba(79,70,229,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] flex flex-col justify-between relative overflow-hidden group"
+                  className="bg-white/88 backdrop-blur-md border border-white/95 rounded-2xl p-4 sm:p-5 2xl:p-6 hover:border-violet-300 transition-all shadow-[0_12px_28px_-8px_rgba(79,70,229,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] flex flex-col justify-between relative overflow-hidden group"
                 >
                   {/* Subtle Top Specular Glass Line */}
                   <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/90 to-transparent pointer-events-none" />
@@ -296,7 +296,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           transition={{ duration: 28, repeat: Infinity, ease: 'linear' }}
           className="flex items-center gap-8 whitespace-nowrap text-xs font-semibold tracking-wider uppercase w-max"
         >
-          {[...Array(2)].map((_, groupIdx) => (
+          {[...Array(4)].map((_, groupIdx) => (
             <div key={groupIdx} className="flex items-center gap-6">
               <span>JUIJUI PRODUCTION & MEDIA KIT 2026</span>
               <span className="text-amber-400">·</span>

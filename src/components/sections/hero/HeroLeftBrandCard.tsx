@@ -35,7 +35,7 @@ export const HeroLeftBrandCard: React.FC<HeroLeftBrandCardProps> = ({
       viewport={REPEAT_VIEWPORT}
       variants={slideFromLeftVariant}
       custom={0.04}
-      className="lg:col-span-7 flex flex-col justify-between bg-white/88 backdrop-blur-xl border border-white/95 rounded-3xl p-6 sm:p-8 shadow-[0_24px_60px_-15px_rgba(79,70,229,0.08),0_8px_20px_-6px_rgba(0,0,0,0.03),inset_0_1.5px_2px_rgba(255,255,255,1)] ring-1 ring-slate-900/[0.04] relative overflow-hidden text-left"
+      className="lg:col-span-7 flex flex-col justify-between bg-white/88 backdrop-blur-xl border border-white/95 rounded-3xl p-6 sm:p-8 2xl:p-10 shadow-[0_24px_60px_-15px_rgba(79,70,229,0.08),0_8px_20px_-6px_rgba(0,0,0,0.03),inset_0_1.5px_2px_rgba(255,255,255,1)] ring-1 ring-slate-900/[0.04] relative overflow-hidden text-left"
     >
       {/* 1.5px Top Specular Glass Bevel Highlight */}
       <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-white to-transparent pointer-events-none z-20" />
@@ -152,7 +152,7 @@ export const HeroLeftBrandCard: React.FC<HeroLeftBrandCardProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 2xl:gap-4">
             {currentCreator.strengths.map((st, idx) => {
               const IconComp = STRENGTH_ICONS[idx % STRENGTH_ICONS.length];
 

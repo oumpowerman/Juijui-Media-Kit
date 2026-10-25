@@ -59,7 +59,7 @@ export const BrandDetailModal: React.FC<BrandDetailModalProps> = ({
             exit={{ opacity: 0, scale: 0.96, y: 14 }}
             transition={{ duration: 0.28, ease: EASE_OUT_EXPO }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-3xl max-h-[88vh] bg-[#FAF8F5] border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+            className="w-full max-w-3xl 2xl:max-w-4xl max-h-[88vh] bg-[#FAF8F5] border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
           >
             {/* Top Brand Identity Banner */}
             <div className="shrink-0 bg-white border-b border-slate-200 px-5 sm:px-7 py-5 flex items-start justify-between gap-4">

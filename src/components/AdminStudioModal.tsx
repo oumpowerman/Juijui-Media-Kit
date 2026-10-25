@@ -156,7 +156,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: 0.38, ease: EASE_OUT_EXPO }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl w-full max-w-6xl h-[90vh] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
+            className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl w-full max-w-6xl xl:max-w-[90vw] 2xl:max-w-[1640px] h-[90vh] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
           >
             {/* Top Studio Header */}
             <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-slate-200 bg-white">

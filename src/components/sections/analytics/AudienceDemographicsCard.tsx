@@ -102,7 +102,7 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
         whileInView="visible"
         viewport={REPEAT_VIEWPORT}
         variants={fadeUpVariant}
-        className="group relative bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_-15px_rgba(15,23,42,0.08)] transition-shadow duration-300 hover:shadow-[0_28px_60px_-15px_rgba(124,58,237,0.15)] overflow-visible"
+        className="group relative bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-6 sm:p-8 2xl:p-10 shadow-[0_20px_50px_-15px_rgba(15,23,42,0.08)] transition-shadow duration-300 hover:shadow-[0_28px_60px_-15px_rgba(124,58,237,0.15)] overflow-visible"
       >
         {/* Dynamic Cursor Spotlight Layer */}
         <motion.div
@@ -165,7 +165,7 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
         </div>
 
         {/* 3 Main Data Columns with 3D Interactive Marketing Tooltips */}
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-7 lg:gap-8">
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-7 lg:gap-8 2xl:gap-10">
           {/* Column 1: Age Distribution */}
           <motion.div
             initial="hidden"
@@ -376,7 +376,7 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                       <span className="text-xs font-bold text-slate-900 block">
                         {g.label}
                       </span>
-                      <div className="w-28 sm:w-32 h-2 bg-slate-100 rounded-full mt-2 overflow-hidden relative">
+                      <div className="w-28 sm:w-32 xl:w-44 2xl:w-56 h-2 bg-slate-100 rounded-full mt-2 overflow-hidden relative">
                         <motion.div
                           initial={{ width: 0 }}
                           whileInView={{ width: `${g.percent}%` }}

@@ -123,7 +123,7 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
           rotateY,
           transformStyle: 'preserve-3d',
         }}
-        className="w-full bg-linear-to-br from-[#231254]/95 via-[#2E1A68]/95 to-[#190D3F]/95 backdrop-blur-2xl text-white rounded-3xl p-6 sm:p-7 pt-12 sm:pt-7 flex flex-col justify-between border border-violet-400/30 relative overflow-hidden shadow-[0_30px_70px_-15px_rgba(30,11,80,0.65),inset_0_1.5px_2px_rgba(255,255,255,0.22)] ring-1 ring-white/10"
+        className="w-full bg-linear-to-br from-[#231254]/95 via-[#2E1A68]/95 to-[#190D3F]/95 backdrop-blur-2xl text-white rounded-3xl p-6 sm:p-7 2xl:p-9 pt-12 sm:pt-7 2xl:pt-9 flex flex-col justify-between border border-violet-400/30 relative overflow-hidden shadow-[0_30px_70px_-15px_rgba(30,11,80,0.65),inset_0_1.5px_2px_rgba(255,255,255,0.22)] ring-1 ring-white/10"
       >
         {/* 1.5px Top Specular Rim Reflection */}
         <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-white/45 to-transparent pointer-events-none z-30" />
@@ -447,7 +447,7 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                         </span>
                       </div>
                       {/* Animated Share Bar with Idle Micro-Shimmer */}
-                      <div className="w-full max-w-[140px] h-1.5 bg-white/10 rounded-full mt-1.5 overflow-hidden relative">
+                      <div className="w-full max-w-[140px] xl:max-w-[220px] 2xl:max-w-[280px] h-1.5 bg-white/10 rounded-full mt-1.5 overflow-hidden relative">
                         <motion.div
                           initial={{ width: 0 }}
                           whileInView={{ width: `${barPercent}%` }}

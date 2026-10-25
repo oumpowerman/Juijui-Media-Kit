@@ -18,7 +18,7 @@ export const RateCardFooter: React.FC<RateCardFooterProps> = ({
 }) => {
   return (
     <footer className="bg-white border-t border-slate-200 py-8 text-xs text-slate-500">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="w-full max-w-7xl xl:max-w-[94vw] 2xl:max-w-[95vw] min-[2400px]:max-w-[2280px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-6 2xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <span className="font-bold text-slate-900">
             {nameTh} | {nameEn}

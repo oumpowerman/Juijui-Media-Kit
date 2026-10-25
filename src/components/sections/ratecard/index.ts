@@ -6,3 +6,5 @@ export * from './AddOnsCalculatorCard';
 export * from './SupportedFormatsStrip';
 export * from './ContactCollaborationSection';
 export * from './RateCardFooter';
+export * from './RateCardBackgroundCanvas';
+

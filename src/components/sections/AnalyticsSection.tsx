@@ -87,7 +87,7 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
       {/* 1. THEMATIC BACKGROUND CANVAS: Live Telemetry & Animated SVG Curves */}
       <AnalyticsBackgroundCanvas telemetryGraphY={telemetryGraphY} />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="relative z-10 w-full max-w-7xl xl:max-w-[94vw] 2xl:max-w-[95vw] min-[2400px]:max-w-[2280px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-6 2xl:px-8 space-y-8 2xl:space-y-10">
         {/* 2. SECTION HEADER & IOS SEGMENTED CONTROL TABS */}
         <AnalyticsHeaderTabs
           platforms={currentCreator.platforms}
@@ -100,7 +100,7 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
         <motion.div
           ref={cardsContainerRef}
           style={{ y: cardsGridParallaxY }}
-          className="flex overflow-x-auto overflow-y-visible sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 py-10 px-6 sm:px-2 -my-6 sm:my-0 snap-x snap-mandatory scrollbar-none"
+          className="flex overflow-x-auto overflow-y-visible sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 2xl:gap-7 py-10 px-6 sm:px-2 -my-6 sm:my-0 snap-x snap-mandatory scrollbar-none"
         >
           {currentCreator.platforms.map((plat) => {
             const isActive = activePlatformHighlight === plat.id;

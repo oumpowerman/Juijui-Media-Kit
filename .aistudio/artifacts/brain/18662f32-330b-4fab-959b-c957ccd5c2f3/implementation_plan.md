@@ -1,99 +1,87 @@
-# Package Cards UI Restructuring & Crisp 2.5D Elevation Plan
+# แผนเพิ่มชุดไอคอน 3D Frosted Glass และอิโมจิการเงินในส่วนบนตรงหัวข้อ (Rate Card Upper Header Floating Financial Icons)
 
-Restructure the Package Cards across all tiers (STARTER, STANDARD, PREMIUM) to solve two core issues: eliminate font rasterization blur by transitioning from heavy 3D GPU tilt to crisp 2.5D elevation, and redesign the multi-platform deliverable row into a spacious 2-line structure that permanently prevents badge-and-icon overlap.
+เพิ่มชุดไอคอน 3D Frosted Glass, อิโมจิการเงิน และเหรียญทองคำใน **พื้นที่ส่วนบนตรงหัวข้อของ `RatecardSection`** (บริเวณรอบชื่อหัวข้อ `แพ็กเกจและเรทราคา`, คำอธิบาย และช่องว่างระหว่างแถบสลับมุมมองการ์ด) เพื่อแก้ปัญหาพื้นที่ส่วนบนโล่ง และแก้ปัญหาไอคอนพื้นหลังเดิมโดนการ์ดแพ็กเกจบังมิด โดยยังคงรักษาไอคอนเดิมไว้ให้ลอยช้าๆ พร้อมเปิดตัวชุดใหม่ด้านบนที่มองเห็นชัดเจน 100%
 
-### User Review & Critical Decisions
+---
+
+## การตัดสินใจที่ได้รับการยืนยันจากคุณ (User Review & Confirmed Decisions)
 
 > [!IMPORTANT]
-> The following user-confirmed decisions govern this implementation:
+> แผนนี้อิงตามคำตอบที่คุณเลือก เพื่อแก้ปัญหาพื้นที่ส่วนบนโล่งและการ์ดบังไอคอนได้อย่างตรงจุด
 
-- **Confirmed Decision 1 (Crisp 2.5D Elevation Hover)**: Replace 3D perspective tilt (`rotateX`, `rotateY`, `perspective(1000px)`, and `preserve-3d`) with a smooth 2.5D elevation hover (`translateY(-6px)` with dynamic soft ambient drop shadows and subtle border lighting). This eliminates GPU texture rasterization and keeps all Thai typography, numbers, and icons 100% vector-crisp at all times.
-- **Confirmed Decision 2 (2-Line Platform Deliverable Structure)**: Redesign the multi-platform deliverable container into 2 dedicated vertical lines:
-  - **Line 1 (Platforms & Channels)**: Horizontal brand icons (TikTok, Instagram, Facebook, YouTube) paired with clear scope text (e.g. "ทุกช่องทางโซเชียล").
-  - **Line 2 (Post Count & Distribution)**: A full-width or flex-justified strip featuring the clean post-count badge (e.g. "4 โพสต์" / "12 โพสต์") alongside coverage details ("กระจายครบ 4 แพลตฟอร์ม") with zero clipping or overlap.
-
----
-
-### 1. Overview & Core Concept
-
-- **What It Does**: Provides a polished, ultra-clean commercial presentation for creator rate packages where every text element, deliverable tag, and price tag is razor-sharp on hover, with a spacious, beautifully balanced deliverable layout.
-- **Problem Solved**:
-  1. *Font Blur on Hover*: In WebKit/Blink browsers, CSS 3D transforms (`rotateX/Y` with `preserve-3d` and nested `translateZ`) cause browsers to flatten elements into a fixed-resolution GPU bitmap, causing Thai font glyphs to appear fuzzy and washed out.
-  2. *Badge Collision*: Squeezing 4 platform icons + text label + long post badge into a single narrow row caused the badge to overlap and obscure the text and icons.
-- **Key Value**: Instant readability, zero visual clutter, and premium aesthetic polish that builds brand trust for prospective commercial clients.
+- **ตำแหน่งการจัดวาง (Placement & Composition)**: **ลอยกระจายรอบหัวข้อและระหว่างแถบสลับมุมมองให้ดูมีชีวิตชีวา** — กระจายตัวอยู่ในพื้นที่เปิดโล่งด้านบน (เหนือการ์ดแพ็กเกจทั้ง 3 ใบ) ทั้งฝั่งซ้ายรอบชื่อหัวข้อ, ตรงกลางช่องว่างระหว่างหัวข้อกับแท็บ และด้านบนขวารอบแถบสลับโหมด
+- **รูปแบบไอคอนและสัญลักษณ์ (Visual Style)**: **ป้ายกระจก 3D Frosted Glass ผสมอิโมจิการเงินและเหรียญทอง** — กรอบกระจกฝ้าโปร่งแสง ขอบแสงขาวเรืองรอง พร้อมไอคอนการเงินสีสดใส (🐷 กระปุกออมสินพร้อมเหรียญหยอด, 💰 ถุงเงินแห่งความคุ้มค่า, 💵 ธนบัตรมรกต, 🪙 เหรียญทองคำสัญลักษณ์ ฿, 💳 กระเป๋าเงินจัดสรรงบประมาณ, 🏷️ ป้ายสิทธิพิเศษ, ✨ ประกายดาวทอง)
+- **การจัดการไอคอนเดิม (Existing Elements Handling)**: **คงอันเดิมไว้ลอยช้าๆ และเพิ่มชุดใหม่ขนาดกะทัดรัดที่ส่วนบน** — ไม่ตัดของเดิมทิ้ง แต่เพิ่มเลเยอร์ส่วนบนโดยเฉพาะ (Upper Header Floating Layer) ที่ไม่โดนการ์ดใบใหญ่บัง
 
 ---
 
-### 2. User Experience & Visual Design
+## 1. ภาพรวมและแนวคิดหลัก (Overview & Core Concept)
 
-#### A. Crisp 2.5D Elevation Physics (Zero Font Blur)
-- Remove `perspective`, `rotateX`, `rotateY`, and `transform-style: preserve-3d`.
-- Apply smooth 2.5D vertical translation on hover:
-  - Default: `translateY(0)` with clean resting border and subtle shadow.
-  - Hover: `translateY(-6px)` with a rich, soft multi-layer ambient shadow (`shadow-[0_20px_35px_-8px_rgba(99,102,241,0.18)]`) and enhanced border accent.
-  - Transition: Smooth cubic-bezier physics (`cubic-bezier(0.16, 1, 0.3, 1)`) for instant, lag-free responsiveness.
-- All fonts render with native subpixel antialiasing (`-webkit-font-smoothing: antialiased`).
-
-#### B. 2-Line Deliverable Container Layout
-Redesign the platform row inside each package card into a structured 2-line layout:
-
-```
-┌────────────────────────────────────────────────────────┐
-│  Line 1: Channels & Scope                              │
-│  [TikTok] [IG] [FB] [YT]   ทุกแพลตฟอร์มหลัก            │
-├────────────────────────────────────────────────────────┤
-│  Line 2: Deliverable Output & Distribution             │
-│  กระจายครบ 4 ช่องทาง          [ 4 โพสต์ ]             │
-└────────────────────────────────────────────────────────┘
-```
-
-- **STARTER Card (1 Platform)**:
-  - Line 1: TikTok brand icon + "ช่องทาง TikTok"
-  - Line 2: "เผยแพร่หน้าโปรไฟล์" + badge "1 โพสต์"
-- **STANDARD Card (4 Platforms)**:
-  - Line 1: 4 brand icons horizontally + "ทุกแพลตฟอร์มหลัก (4 ช่องทาง)"
-  - Line 2: "กระจายครบทุกแพลตฟอร์ม" + badge "4 โพสต์"
-- **PREMIUM Card (4 Platforms)**:
-  - Line 1: 4 brand icons horizontally + "ทุกแพลตฟอร์มหลัก (4 ช่องทาง)"
-  - Line 2: "3 คลิป × 4 ช่องทาง" + badge "รวม 12 โพสต์"
-
-#### C. Visual Hierarchy & "Most Popular" Accent
-- **STANDARD Card**: Maintains its prominent "MOST POPULAR · แนะนำสูงสุด" crown badge, distinctive purple-fuchsia header banner, and refined indigo rim accent without any stiff background elements.
-- **Card Selection**: Clicking toggles package selection with immediate feedback.
+- **สิ่งที่ระบบนี้ทำ**: สร้างเลเยอร์ป้ายไอคอนการเงินลอยตัวแบบ 3D Glass เฉพาะสำหรับพื้นที่ส่วนบน (Header Zone) ของ `RateCalculatorSection` โดยผูกกับจังหวะการสกอร์ล (Scroll Parallax) และการลอยตัวเป็นจังหวะ (Floating Breathing Physics)
+- **กลุ่มเป้าหมายหลัก**: ผู้ชมและลูกค้าแบรนด์ที่เลื่อนมาถึงส่วนเรทการ์ด จะสะดุดตากับความมีชีวิตชีวาของสัญลักษณ์ทางการเงินและความคุ้มค่าตั้งแต่ส่วนหัวข้อทันที โดยไม่ต้องรอให้เลื่อนลงไปด้านข้าง
+- **คุณค่าหลักที่ได้รับ**: เติมเต็มพื้นที่สีขาวด้านบนให้ดูมีลูกเล่นพรีเมียม สื่อถึงบรรยากาศ "การลงทุนที่คุ้มค่า (Smart Investment)" และสอดรับกับป้าย Most Popular ของการ์ดใบกลางอย่างกลมกลืน
 
 ---
 
-### 3. Key Product Decisions & Trade-Offs
+## 2. ประสบการณ์ผู้ใช้และการออกแบบภาพลักษณ์ (User Experience & Visual Design)
 
-- **Decision 1: 2.5D Elevation vs. 3D Tilt**
-  - *Chosen Approach*: 2.5D elevation (`translateY(-6px)` + ambient shadow depth).
-  - *Why*: Guarantees 100% crisp vector font rendering across all browser engines (Chrome, Edge, Safari, Firefox), completely eliminating GPU texture blur.
-  - *Alternatives Considered*: Tweaking 3D tilt with `backface-visibility: hidden` and `scale(1.0001)`, which still causes font antialiasing degradation on high-DPI displays.
+### ตำแหน่งและรายละเอียดของไอคอนส่วนบน (Upper Header Icons Inventory)
+1. **โซนซ้ายบน — เหนือป้ายกำกับ `05 · RATE CARD`**:
+   - ป้ายกระจก **🐷 กระปุกออมสินชมพู-ทอง (Piggy Bank Value Capsule)** พร้อมเหรียญ ฿ กำลังหยอดลงกระปุกเบาๆ
+   - เหรียญทอง **🪙 ฿ Coin Glow** ดวงเล็กหมุนเอียงและส่องประกายข้างคำว่า "แพ็กเกจและเรทราคา"
+2. **โซนกึ่งกลาง — ช่องว่างระหว่างหัวข้อกับแถบแท็บสลับมุมมอง**:
+   - ป้าย **💰 ถุงเงินและงบประมาณแคมเปญ (Smart Budget Pouch)** กรอบกระจกใสประกายเขียวมรกต-ทอง
+   - แคปซูล **💵 ธนบัตรคู่ (Banknote Stream)** ลอยเอียงรับสายตา
+   - ประกายแสง **✨ Value Sparkles** พาสเทลสีทอง-ม่วง
+3. **โซนขวาบน — บริเวณรอบแถบแท็บสลับมุมมอง (View Mode Switcher)**:
+   - ป้าย **💳 กระเป๋าเงินจัดสรรงบ (Digital Wallet Badge)** กรอบกระจกใสสีม่วงไวโอเล็ต
+   - ป้าย **🏷️ ป้ายสิทธิพิเศษและความคุ้มค่า (Best ROI / Value Tag)** สีแอมเบอร์ทองกะทัดรัด
+   - เหรียญทอง **🪙 ฿ Floating Coin** ส่องประกายด้านบนขวา
 
-- **Decision 2: 2-Line Deliverable Structure vs. Compact 1-Line**
-  - *Chosen Approach*: 2-line layout inside the deliverable card.
-  - *Why*: Gives both the 4 brand icons and the post-count badges adequate horizontal breathing room across all screen widths (mobile, tablet, and desktop), completely eliminating overlapping.
-  - *Alternatives Considered*: Shrinking badge padding and icon size in 1 line, which makes touch targets tiny and feels cramped.
+### การเคลื่อนไหวและการโต้ตอบ (Motion Choreography & Spatial Depth)
+- **Scroll Parallax แบบสัมพันธ์กับการเลื่อนหน้าจอ**: ผูกเข้ากับค่า `smoothRateScroll` เพื่อให้ไอคอนส่วนบนขยับลอยขึ้นลงต่างระดับกับตัวหนังสือหัวข้อ (`y: [-25px, 25px]`)
+- **Idle Floating & Breathing**: แต่ละไอคอนมีแอนิเมชันลอยตัวขึ้น-ลง (`y: [-5px, 5px]`) และหมุนเอียงเบาๆ (`rotate: [-3deg, 3deg]`) ด้วยระยะเวลา (Duration 4s–6s) และดีเลย์ที่แตกต่างกันเพื่อความเป็นธรรมชาติ
+- **Responsive Safety**: ซ่อนหรือย่อขนาดในหน้าจอมือถืออัตโนมัติ เพื่อไม่ให้เบียดกับตัวหนังสือในจอแคบ และจัดเรียงอย่างสง่างามบนจอแท็บเล็ตและคอมพิวเตอร์
 
 ---
 
-### 4. Technical Architecture & File Updates
+## 3. การตัดสินใจเชิงผลิตภัณฑ์และเหตุผลรองรับ (Key Product Decisions & Trade-Offs)
+
+- **การตัดสินใจที่ 1: แยกเลเยอร์ Header Floating Icons ไว้ที่ด้านบนอย่างชัดเจน**
+  - *แนวทางที่เลือก*: ออกแบบชุดไอคอนส่วนบนให้อยู่ภายในขอบเขตแกน Y ของส่วนหัวข้อ (Header Zone, `top: 0%` ถึง `top: 25%` ของ Section) และอยู่ในเลเยอร์ `z-0` หรือผสานเข้ากับ Header Wrapper ในระดับที่ลอยอยู่รอบตัวหนังสือ
+  - *เหตุผล*: ป้องกันไม่ให้ไอคอนไหลลงไปอยู่ด้านหลังการ์ดใบใหญ่เมื่อผู้ใช้เลื่อนหน้าจอ
+- **การตัดสินใจที่ 2: ใช้กรอบ Frosted Glass แบบขนาดกะทัดรัด (Compact 3D Glass Badges)**
+  - *แนวทางที่เลือก*: ควบคุมขนาดของแต่ละป้ายให้อยู่ระหว่าง 32px – 44px พร้อมกระจกฝ้าโปร่งแสง (`bg-white/80 backdrop-blur-md border-white/90`)
+  - *เหตุผล*: ช่วยให้ไอคอนดูโดดเด่นมีมิติ แต่ไม่แย่งความสนใจหรือบดบังตัวหนังสือชื่อแพ็กเกจและปุ่มกดแท็บ
+
+---
+
+## 4. สถาปัตยกรรมทางเทคนิค (Technical Architecture)
+
+### แผนผังโครงสร้างการจัดวางเลเยอร์
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Package3DCard.tsx                            │
-│                                                                 │
-│   • Replaced 3D tilt state with isHovered boolean               │
-│   • Removed preserve-3d and perspective                         │
-│   • Added 2.5D translateY(-6px) with dynamic elevation shadow   │
-│   • Refactored platform container into 2 structured rows:       │
-│       - Row 1: PlatformBadgeGroup + platform text               │
-│       - Row 2: Coverage description + post count badge          │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    RateCalculatorSection (Main Section)                    │
+├────────────────────────────────────────────────────────────────────────────┤
+│  Layer 0: Background Canvas                                                │
+│  • Wealth Aura Mesh (Pastel Green, Amber, Violet)                          │
+│  • Deep Monospace Financial Numerals (฿, +ROI, %, ×3)                      │
+│                                                                            │
+│  Layer 1: Upper Header Floating Financial Icons (NEW)                      │
+│  • 🐷 Piggy Bank Capsule (Top-Left above title)                            │
+│  • 🪙 Shimmering ฿ Coins (Flanking title & description)                    │
+│  • 💰 Money Pouch & 💵 Banknote (Mid gap between title & tabs)             │
+│  • 💳 Wallet & 🏷️ Value Tag (Top-Right near view tabs)                    │
+│                                                                            │
+│  Layer 2: Foreground Interactive Content (z-10)                            │
+│  • Title: "แพ็กเกจและเรทราคา" & Subtext                                   │
+│  • View Mode Tabs: [ทั้งการ์ดและตาราง] [ดูแบบการ์ด 3D] [ดูตารางเปรียบเทียบ] │
+│  • 3 Package 3D Tilt Cards (Starter, Standard, Premium)                    │
+│  • Comparison Matrix Table & Add-ons Calculator                            │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Files to be Modified:
-1. `src/components/sections/ratecard/Package3DCard.tsx`:
-   - Simplify mouse interaction to `isHovered` state (no complex mouse-tracking math).
-   - Implement clean 2.5D elevation on hover.
-   - Restructure the platform container into the approved 2-line layout.
+### การเชื่อมโยงคอมโพเนนต์
+- ปรับปรุง `RateCardBackgroundCanvas.tsx` ให้มีชุด **Header Floating Financial Icons Layer** โดยเฉพาะ พร้อมคำนวณตำแหน่งพิกัดให้อยู่ในโซนเปิดโล่งด้านบนอย่างแม่นยำ
+- อัปเดต `RateCalculatorSection.tsx` เพื่อส่งผ่านค่า Scroll Parallax และควบคุมการจัดวางให้รับกันอย่างลงตัว

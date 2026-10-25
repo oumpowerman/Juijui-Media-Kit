@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for Package Cards UI restructuring with crisp 2.5D elevation hover physics (eliminating font blurring) and a 2-line multi-platform deliverable box (eliminating badge overlaps).",
-  "updatedAt":  "2026-10-25T15:19:31.066758169Z",
+  "summary":  "แผนการเพิ่มไอคอน 3D Frosted Glass และอิโมจิการเงินในส่วนบนตรงหัวข้อของ RatecardSection ลอยกระจายรอบหัวข้อและระหว่างแถบสลับมุมมอง พร้อมระบบ Scroll Parallax และจังหวะลอยตัวอย่างมีชีวิตชีวา ไม่โดนการ์ดแพ็กเกจบัง",
+  "updatedAt":  "2026-10-25T18:06:10.839545231Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

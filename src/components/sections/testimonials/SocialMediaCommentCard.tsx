@@ -32,7 +32,6 @@ export const SocialMediaCommentCard: React.FC<SocialMediaCommentCardProps> = ({
 
   return (
     <motion.div
-      layout
       whileHover={{ y: -4 }}
       transition={{ duration: 0.25 }}
       className={`group relative rounded-2xl border transition-all overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md ${

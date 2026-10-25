@@ -32,7 +32,6 @@ export const LineChatBrandCard: React.FC<LineChatBrandCardProps> = ({
 
   return (
     <motion.div
-      layout
       whileHover={{ y: -4 }}
       transition={{ duration: 0.25 }}
       className="group relative rounded-2xl border border-emerald-200/80 bg-white shadow-2xs hover:shadow-md hover:border-emerald-400/80 transition-all overflow-hidden flex flex-col justify-between"
@@ -50,6 +49,10 @@ export const LineChatBrandCard: React.FC<LineChatBrandCardProps> = ({
               </span>
               <span className="px-1.5 py-0.5 rounded-full bg-white/25 text-[10px] font-semibold uppercase tracking-wider shrink-0">
                 LINE Chat
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-amber-400/25 border border-amber-200/40 text-amber-100 text-[10px] font-bold shrink-0">
+                <span>★★★★★</span>
+                <span className="ml-0.5 font-mono-num">5.0</span>
               </span>
             </div>
             <p className="text-[11px] text-white/85 truncate font-normal">
@@ -85,9 +88,14 @@ export const LineChatBrandCard: React.FC<LineChatBrandCardProps> = ({
           </div>
 
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-slate-700 block">
-              {comment.authorName}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-700">
+                {comment.authorName}
+              </span>
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-500">
+                ★★★★★
+              </span>
+            </div>
             <div className="flex items-end gap-1.5">
               <div className="relative p-3 rounded-2xl rounded-tl-xs bg-white border border-slate-200/80 shadow-2xs text-slate-800 text-xs sm:text-[13px] leading-relaxed">
                 <p className="whitespace-pre-line">{comment.content}</p>
