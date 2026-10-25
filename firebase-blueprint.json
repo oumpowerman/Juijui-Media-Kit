@@ -1,0 +1,248 @@
+{
+  "entities": {
+    "CreatorProfile": {
+      "title": "CreatorProfile",
+      "description": "Complete Media Kit & Rate Card profile for a content creator channel including overview stats, platforms, demographics, viral works, audience proof, rate packages, add-ons, free perks, and contact info.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique creator document identifier"
+        },
+        "nameTh": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Creator channel Thai name"
+        },
+        "nameEn": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Creator channel English name"
+        },
+        "roleTitle": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Role subtitle of the creator"
+        },
+        "tierLabel": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Creator tier and follower badge label"
+        },
+        "updatedLabel": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Last updated date label"
+        },
+        "quote": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Signature channel quote"
+        },
+        "bioDescription": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Channel bio and storytelling description"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Primary avatar image URL"
+        },
+        "portraitUrl": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Contact section portrait image URL"
+        },
+        "pdfMediaKitUrl": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Original PDF Media Kit URL"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Content category tags"
+        },
+        "moodAndTone": {
+          "type": "array",
+          "description": "Channel mood and tone keywords"
+        },
+        "strengths": {
+          "type": "array",
+          "description": "Key channel strengths list"
+        },
+        "overview": {
+          "type": "object",
+          "description": "Top-level channel KPI metrics"
+        },
+        "platforms": {
+          "type": "array",
+          "description": "Social media platform statistics"
+        },
+        "demographics": {
+          "type": "object",
+          "description": "Audience gender, age groups, locations, and interests"
+        },
+        "viralWorks": {
+          "type": "array",
+          "description": "Viral showcase items (16:9 horizontal and 9:16 vertical)"
+        },
+        "commentProofs": {
+          "type": "array",
+          "description": "Audience and brand comment testimonials"
+        },
+        "packages": {
+          "type": "array",
+          "description": "Rate card packages (Starter, Standard, Premium)"
+        },
+        "freePerks": {
+          "type": "array",
+          "description": "Included free services in every package"
+        },
+        "addOns": {
+          "type": "array",
+          "description": "Optional add-on services"
+        },
+        "customCollabNotes": {
+          "type": "array",
+          "description": "Custom collaboration options (Budget Friendly, Barter Trade)"
+        },
+        "supportedFormats": {
+          "type": "array",
+          "description": "Supported content formats"
+        },
+        "brandShowcaseConfig": {
+          "type": "object",
+          "description": "Configuration and KPI summary for the 60+ Brand Collaborations section"
+        },
+        "brandCollaborations": {
+          "type": "array",
+          "description": "60+ Brand partners, campaign count, repeat status, video styles, total views, sample clips, and client quotes"
+        },
+        "contact": {
+          "type": "object",
+          "description": "LINE, email, phone, and social handle contact info"
+        }
+      },
+      "required": ["id", "nameTh", "nameEn", "roleTitle", "overview", "platforms", "packages", "contact"]
+    },
+    "BookingRecord": {
+      "title": "BookingRecord",
+      "description": "Client campaign booking and quotation record",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "quoteNumber": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "creatorId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "creatorName": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "packageId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "packageName": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "basePrice": {
+          "type": "number"
+        },
+        "selectedAddOns": {
+          "type": "array"
+        },
+        "collaborationType": {
+          "type": "string",
+          "enum": ["standard_package", "budget_friendly", "barter_trade"]
+        },
+        "customBudgetAmount": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "totalPrice": {
+          "type": "number"
+        },
+        "brandName": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "contactName": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "contactChannel": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "productDetails": {
+          "type": "string",
+          "maxLength": 4000
+        },
+        "targetCampaignDate": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "referenceLinks": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "enum": ["รอดำเนินการ", "ยืนยันคิวงานแล้ว", "กำลังผลิตคอนเทนต์", "ส่งมอบงานสำเร็จ"]
+        }
+      },
+      "required": ["id", "quoteNumber", "creatorId", "brandName", "contactChannel", "totalPrice", "status"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized admin user record",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "addedAt": {
+          "type": "string",
+          "maxLength": 100
+        }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/creators/{creatorId}": {
+      "schema": { "$ref": "#/entities/CreatorProfile" },
+      "description": "Stores complete Media Kit & Rate Card data for each creator profile."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/BookingRecord" },
+      "description": "Stores client booking and quotation requests."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Stores authorized administrator UIDs."
+    }
+  }
+}

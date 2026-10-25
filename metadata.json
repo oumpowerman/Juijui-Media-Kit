@@ -1,0 +1,6 @@
+{
+  "name": "AI PDF Reader & Assistant",
+  "description": "ระบบอ่าน วิเคราะห์ และถาม-ตอบเอกสาร PDF อัจฉริยะด้วย Gemini AI",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

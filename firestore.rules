@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == "dramaeveryday222@gmail.com" && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidCreator(data) {
+      return data.keys().hasAll(['id', 'nameTh', 'nameEn', 'roleTitle', 'overview', 'platforms', 'packages', 'contact']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+        data.nameTh is string && data.nameTh.size() >= 1 && data.nameTh.size() <= 200 &&
+        data.nameEn is string && data.nameEn.size() >= 1 && data.nameEn.size() <= 200 &&
+        data.roleTitle is string && data.roleTitle.size() <= 300 &&
+        data.overview is map &&
+        data.platforms is list && data.platforms.size() <= 20 &&
+        data.packages is list && data.packages.size() <= 20 &&
+        data.contact is map;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['id', 'quoteNumber', 'creatorId', 'brandName', 'contactChannel', 'totalPrice', 'status']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+        data.quoteNumber is string && data.quoteNumber.size() >= 1 && data.quoteNumber.size() <= 100 &&
+        data.creatorId is string && data.creatorId.size() >= 1 && data.creatorId.size() <= 128 &&
+        data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 300 &&
+        data.contactChannel is string && data.contactChannel.size() >= 1 && data.contactChannel.size() <= 300 &&
+        data.totalPrice is number && data.totalPrice >= 0 &&
+        data.status in ['รอดำเนินการ', 'ยืนยันคิวงานแล้ว', 'กำลังผลิตคอนเทนต์', 'ส่งมอบงานสำเร็จ'];
+    }
+
+    function isValidAdmin(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+        data.keys().hasOnly(['uid', 'email', 'addedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 300;
+    }
+
+    // 4. Collection Rules
+    // Publicly viewable Media Kit profiles; editable strictly by Admin
+    match /creators/{creatorId} {
+      allow get: if isValidId(creatorId);
+      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow create: if isValidId(creatorId) && isAdmin() && isValidCreator(incoming());
+      allow update: if isValidId(creatorId) && isAdmin() && isValidCreator(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(creatorId) && isAdmin();
+    }
+
+    // Client bookings: Anyone can submit a valid booking quote request; only Admin can read/manage bookings (PII Isolation)
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && isAdmin();
+      allow list: if isAdmin() && resource.data.id is string;
+      allow create: if isValidId(bookingId) && isValidBooking(incoming());
+      allow update: if isValidId(bookingId) && isAdmin() && isValidBooking(incoming()) && incoming().id == existing().id;
+      allow delete: if isValidId(bookingId) && isAdmin();
+    }
+
+    // Admin registry
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin() && resource.data.uid is string;
+      allow create, update: if isValidId(adminUid) && isAdmin() && isValidAdmin(incoming());
+      allow delete: if isValidId(adminUid) && isAdmin();
+    }
+  }
+}

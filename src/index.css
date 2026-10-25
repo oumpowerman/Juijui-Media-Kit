@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: 'Plus Jakarta Sans', 'Noto Sans Thai', sans-serif;
+    --font-body: 'DM Sans', 'Noto Sans Thai', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html,
+  body {
+    scroll-behavior: smooth;
+    font-family: var(--font-body);
+    color: #1E1B4B;
+    background-color: #FAFAFC;
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Global ultra-slim scrollbar for WebKit/Blink browsers (Chrome, Edge, Safari) */
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 4px;
+  height: 0px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(109, 40, 217, 0.18);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 40, 217, 0.42);
+}
+
+/* Dedicated ultra-slim scrollbar for studio modals and internal lists */
+.slim-scroll::-webkit-scrollbar {
+  width: 3.5px;
+  height: 3.5px;
+}
+
+.slim-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 6px;
+}
+
+.slim-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.32);
+  border-radius: 9999px;
+}
+
+.slim-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(109, 40, 217, 0.38);
+}
+
+.slim-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 40, 217, 0.65);
+}
+
+/* Firefox fallback only when ::-webkit-scrollbar is not supported */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(109, 40, 217, 0.22) transparent;
+  }
+}
+
+/* Utility to hide scrollbar completely on internal horizontal strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes iosTooltipPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.90) translateY(8px);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.018) translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes iosTooltipPopOut {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(6px);
+  }
+}
+
+@keyframes iosTooltipPopInTop {
+  0% {
+    opacity: 0;
+    transform: scale(0.90) translateY(-8px);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.018) translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes iosTooltipPopOutTop {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92) translateY(-6px);
+  }
+}
+
+.animate-ios-pop {
+  animation: iosTooltipPopIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: bottom center;
+}
+
+.animate-ios-pop-out {
+  animation: iosTooltipPopOut 0.18s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  transform-origin: bottom center;
+}
+
+.animate-ios-pop-top {
+  animation: iosTooltipPopInTop 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top center;
+}
+
+.animate-ios-pop-top-out {
+  animation: iosTooltipPopOutTop 0.18s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  transform-origin: top center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
