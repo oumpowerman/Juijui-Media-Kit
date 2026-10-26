@@ -155,6 +155,11 @@ export interface CreatorProfile {
   avatarUrl: string;
   portraitUrl: string;
   pdfMediaKitUrl: string;
+  faviconMode?: 'emoji' | 'avatar' | 'custom';
+  faviconEmoji?: string;
+  faviconUrl?: string;
+  faviconShape?: 'circle' | 'rounded' | 'square';
+  browserTabTitle?: string;
   updatedLabel: string;
   overview: {
     totalFollowers: string;
@@ -264,6 +269,11 @@ export const INITIAL_CREATORS: CreatorProfile[] = [
     avatarUrl: '/assets/juijui/avatar-main.jpg',
     portraitUrl: '/assets/juijui/duo-portrait.jpg',
     pdfMediaKitUrl: '/assets/aistudio/_Media_kit_PR_BIGBAG_8383827f.pdf',
+    faviconMode: 'emoji',
+    faviconEmoji: '✨',
+    faviconUrl: '',
+    faviconShape: 'rounded',
+    browserTabTitle: 'JUIJUI Media Kit 2026 — Interactive Creator Rate Card',
     updatedLabel: 'อัปเดตข้อมูล พฤษภาคม 2569 · ข้อมูลยอดรวมย้อนหลัง 60 วัน',
     overview: {
       totalFollowers: '979.1K+',

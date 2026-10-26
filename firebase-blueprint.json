@@ -61,6 +61,31 @@
           "maxLength": 1000,
           "description": "Original PDF Media Kit URL"
         },
+        "faviconMode": {
+          "type": "string",
+          "enum": ["emoji", "avatar", "custom"],
+          "description": "Browser tab favicon display mode"
+        },
+        "faviconEmoji": {
+          "type": "string",
+          "maxLength": 32,
+          "description": "Emoji character for browser tab icon"
+        },
+        "faviconUrl": {
+          "type": "string",
+          "maxLength": 100000,
+          "description": "Custom image URL or cropped 64x64 Data URL for browser tab icon"
+        },
+        "faviconShape": {
+          "type": "string",
+          "enum": ["circle", "rounded", "square"],
+          "description": "Mask shape for cropped favicon image"
+        },
+        "browserTabTitle": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Custom browser tab title text"
+        },
         "categories": {
           "type": "array",
           "description": "Content category tags"

@@ -87,9 +87,25 @@ testConnection();
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-export async function signInAdminWithGoogle(): Promise<User> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+export async function signInAdminWithGoogle(): Promise<User | null> {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error: unknown) {
+    const errCode = (error as { code?: string })?.code || '';
+    const errMsg = error instanceof Error ? error.message : String(error);
+    if (
+      errCode === 'auth/popup-closed-by-user' ||
+      errCode === 'auth/cancelled-popup-request' ||
+      errCode === 'auth/popup-blocked' ||
+      errMsg.includes('popup-closed-by-user') ||
+      errMsg.includes('cancelled-popup-request')
+    ) {
+      return null;
+    }
+    console.warn('Google sign-in warning:', errMsg);
+    return null;
+  }
 }
 
 export async function signOutAdmin(): Promise<void> {

@@ -69,6 +69,8 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
     setAuthLoading(true);
     try {
       await onLoginGoogle();
+    } catch {
+      // Ignore cancelled popup
     } finally {
       setAuthLoading(false);
     }

@@ -50,10 +50,19 @@ import {
   RateCalculatorSection,
   RateViewMode,
 } from './components/sections/RateCalculatorSection';
+import { applyBrowserTabMeta } from './utils/faviconUtils';
 
 function withBrandDefaults(creator: CreatorProfile): CreatorProfile {
   return {
     ...creator,
+    faviconMode: creator.faviconMode || INITIAL_CREATORS[0].faviconMode || 'emoji',
+    faviconEmoji: creator.faviconEmoji || INITIAL_CREATORS[0].faviconEmoji || '✨',
+    faviconUrl: creator.faviconUrl ?? INITIAL_CREATORS[0].faviconUrl ?? '',
+    faviconShape: creator.faviconShape || INITIAL_CREATORS[0].faviconShape || 'rounded',
+    browserTabTitle:
+      creator.browserTabTitle ||
+      INITIAL_CREATORS[0].browserTabTitle ||
+      `${creator.nameEn} Media Kit 2026 — Interactive Creator Rate Card`,
     brandShowcaseConfig:
       creator.brandShowcaseConfig || INITIAL_CREATORS[0].brandShowcaseConfig,
     brandCollaborations:
@@ -255,6 +264,13 @@ export default function App() {
   const currentCreator =
     creators.find((c) => c.id === activeCreatorId) || creators[0] || INITIAL_CREATORS[0];
 
+  // Dynamically synchronize browser tab favicon (emoji / cropped image / avatar) and tab title
+  useEffect(() => {
+    if (!isAdminModalOpen) {
+      applyBrowserTabMeta(currentCreator);
+    }
+  }, [currentCreator, isAdminModalOpen]);
+
   // Ensure selectedPackageId exists on currentCreator if set
   useEffect(() => {
     if (selectedPackageId && !currentCreator.packages.some((p) => p.id === selectedPackageId)) {
@@ -396,16 +412,20 @@ export default function App() {
   };
 
   const handleLoginGoogle = async () => {
-    const user = await signInAdminWithGoogle();
-    if (user) {
-      // Seed current creators to Firestore upon admin login so Cloud DB is immediately up to date
-      for (const c of creators) {
-        try {
-          await setDoc(doc(db, 'creators', c.id), c);
-        } catch {
-          // If user is not dramaeveryday222@gmail.com, Firestore rule blocks write gracefully
+    try {
+      const user = await signInAdminWithGoogle();
+      if (user) {
+        // Seed current creators to Firestore upon admin login so Cloud DB is immediately up to date
+        for (const c of creators) {
+          try {
+            await setDoc(doc(db, 'creators', c.id), c);
+          } catch {
+            // If user is not dramaeveryday222@gmail.com, Firestore rule blocks write gracefully
+          }
         }
       }
+    } catch {
+      // Ignore user-cancelled popup
     }
   };
 
