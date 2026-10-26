@@ -132,13 +132,13 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
         <div className="pointer-events-none absolute inset-0 overflow-hidden z-15 rounded-3xl select-none">
           <motion.div
             animate={{
-              x: ['-140%', '260%'],
+              x: ['-180%', '580%'],
             }}
             transition={{
-              duration: 6.5,
+              duration: 4.8,
               repeat: Infinity,
-              ease: [0.16, 1, 0.3, 1],
-              repeatDelay: 2.2,
+              ease: [0.4, 0.0, 0.2, 1],
+              repeatDelay: 3.2,
             }}
             style={{ transform: 'skewX(-26deg)' }}
             className="absolute inset-y-0 w-40 bg-linear-to-r from-transparent via-white/[0.09] to-transparent pointer-events-none"

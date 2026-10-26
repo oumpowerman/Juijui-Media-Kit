@@ -197,44 +197,48 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             viewport={REPEAT_VIEWPORT}
             className="mt-6 2xl:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4 2xl:gap-6"
           >
-            {[
-              {
-                icon: Users,
-                iconBg: 'bg-violet-100 text-violet-700',
-                label: 'ผู้ติดตามรวม (Total Followers)',
-                value: currentCreator.overview.totalFollowers,
-                sub: 'TikTok · FB · IG · YouTube',
-                showAllPlatforms: true,
-                color: 'text-[#1E1B4B]',
-              },
-              {
-                icon: Eye,
-                iconBg: 'bg-indigo-100 text-indigo-700',
-                label: 'ยอดวิวรวม 60 วัน (Total Views)',
-                value: currentCreator.overview.totalViews60d,
-                sub: `Reach ${currentCreator.overview.monthlyReach}/เดือน`,
-                showAllPlatforms: false,
-                color: 'text-violet-700',
-              },
-              {
-                icon: Flame,
-                iconBg: 'bg-emerald-100 text-emerald-700',
-                label: 'Engagement เฉลี่ย (Total ER)',
-                value: currentCreator.overview.totalEr,
-                sub: 'TikTok สูงสุด 8.01%',
-                highlightPlatform: 'TikTok',
-                color: 'text-emerald-700',
-              },
-              {
-                icon: Play,
-                iconBg: 'bg-amber-100 text-amber-700',
-                label: 'ยอดดูเฉลี่ยต่อคลิป (Avg. Views)',
-                value: currentCreator.overview.avgViewsPerContent,
-                sub: `Likes ${currentCreator.overview.monthlyLikes}/เดือน`,
-                showAllPlatforms: false,
-                color: 'text-[#1E1B4B]',
-              },
-            ].map((kpi, idx) => {
+            {(() => {
+              const tiktokPlat = currentCreator.platforms.find((p) => p.id === 'tiktok');
+              const tiktokErText = tiktokPlat?.er ? `TikTok สูงสุด ${tiktokPlat.er}` : 'TikTok สูงสุด 8.01%';
+              return [
+                {
+                  icon: Users,
+                  iconBg: 'bg-violet-100 text-violet-700',
+                  label: 'ผู้ติดตามรวม (Total Followers)',
+                  value: currentCreator.overview.totalFollowers,
+                  sub: 'TikTok · FB · IG · YouTube',
+                  showAllPlatforms: true,
+                  color: 'text-[#1E1B4B]',
+                },
+                {
+                  icon: Eye,
+                  iconBg: 'bg-indigo-100 text-indigo-700',
+                  label: 'ยอดวิวรวม 60 วัน (Total Views)',
+                  value: currentCreator.overview.totalViews60d,
+                  sub: `Reach ${currentCreator.overview.monthlyReach}/เดือน`,
+                  showAllPlatforms: false,
+                  color: 'text-violet-700',
+                },
+                {
+                  icon: Flame,
+                  iconBg: 'bg-emerald-100 text-emerald-700',
+                  label: 'Engagement เฉลี่ย (Total ER)',
+                  value: currentCreator.overview.totalEr,
+                  sub: tiktokErText,
+                  highlightPlatform: 'TikTok',
+                  color: 'text-emerald-700',
+                },
+                {
+                  icon: Play,
+                  iconBg: 'bg-amber-100 text-amber-700',
+                  label: 'ยอดดูเฉลี่ยต่อคลิป (Avg. Views)',
+                  value: currentCreator.overview.avgViewsPerContent,
+                  sub: `Likes ${currentCreator.overview.monthlyLikes}/เดือน`,
+                  showAllPlatforms: false,
+                  color: 'text-[#1E1B4B]',
+                },
+              ];
+            })().map((kpi, idx) => {
               const KpiIcon = kpi.icon;
               return (
                 <motion.div
@@ -298,29 +302,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         >
           {[...Array(4)].map((_, groupIdx) => (
             <div key={groupIdx} className="flex items-center gap-6">
-              <span>JUIJUI PRODUCTION & MEDIA KIT 2026</span>
+              <span>{currentCreator.nameEn} PRODUCTION & {currentCreator.tierLabel || 'MEDIA KIT 2026'}</span>
               <span className="text-amber-400">·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <PlatformBrandIcon platform="TikTok" size="xs" />
-                <span>TIKTOK 802.2K (ER 8.01%)</span>
-              </span>
-              <span className="text-amber-400">·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <PlatformBrandIcon platform="Facebook" size="xs" />
-                <span>FACEBOOK 96K</span>
-              </span>
-              <span className="text-amber-400">·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <PlatformBrandIcon platform="Instagram" size="xs" />
-                <span>IG REELS 61.9K</span>
-              </span>
-              <span className="text-amber-400">·</span>
-              <span className="inline-flex items-center gap-1.5">
-                <PlatformBrandIcon platform="YouTube" size="xs" />
-                <span>YOUTUBE 19K (16:9 & SHORTS)</span>
-              </span>
-              <span className="text-amber-400">·</span>
-              <span>28M+ VIEWS IN 60 DAYS</span>
+              {currentCreator.platforms.map((plat) => (
+                <React.Fragment key={plat.id}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <PlatformBrandIcon platform={plat.name} size="xs" />
+                    <span>{plat.name.toUpperCase()} {plat.followers} (ER {plat.er})</span>
+                  </span>
+                  <span className="text-amber-400">·</span>
+                </React.Fragment>
+              ))}
+              <span>{currentCreator.overview.totalViews60d} VIEWS IN 60 DAYS</span>
               <span className="text-amber-400">·</span>
             </div>
           ))}

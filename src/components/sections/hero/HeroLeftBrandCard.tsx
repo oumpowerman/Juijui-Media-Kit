@@ -44,13 +44,13 @@ export const HeroLeftBrandCard: React.FC<HeroLeftBrandCardProps> = ({
       <motion.div
         aria-hidden="true"
         animate={{
-          x: ['-120%', '220%'],
+          x: ['-150%', '550%'],
         }}
         transition={{
-          duration: 7,
+          duration: 5.5,
           repeat: Infinity,
-          ease: 'easeInOut',
-          repeatDelay: 4,
+          ease: [0.4, 0.0, 0.2, 1],
+          repeatDelay: 3.5,
         }}
         className="absolute -top-32 -bottom-32 w-56 bg-linear-to-r from-transparent via-white/18 to-transparent skew-x-[-20deg] pointer-events-none z-20"
       />
@@ -91,7 +91,7 @@ export const HeroLeftBrandCard: React.FC<HeroLeftBrandCardProps> = ({
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-700" />
           </motion.div>
-          <span>01 · MEDIA KIT 2026</span>
+          <span>{currentCreator.tierLabel || '01 · MEDIA KIT 2026'}</span>
           <span aria-hidden="true" className="text-violet-300">·</span>
           <span>{currentCreator.categories.join(' · ')}</span>
         </div>
