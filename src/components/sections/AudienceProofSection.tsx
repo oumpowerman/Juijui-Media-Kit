@@ -228,8 +228,10 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
           <motion.div
             variants={fadeUpVariant}
             custom={0}
+            whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleSelectTab('ลูกค้าแบรนด์ / เอเจนซี่')}
-            className="group relative bg-white/95 backdrop-blur-xl border border-amber-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_12px_28px_-12px_rgba(245,158,11,0.12)] hover:-translate-y-0.5 hover:border-amber-300 transition-all duration-200 cursor-pointer overflow-hidden"
+            className="group relative bg-white/95 backdrop-blur-xl border border-amber-200/80 hover:border-amber-400/90 rounded-2xl p-4 sm:p-5 shadow-[0_10px_25px_-10px_rgba(245,158,11,0.12)] hover:shadow-[0_16px_32px_-10px_rgba(245,158,11,0.22)] transition-[border-color,box-shadow] duration-200 cursor-pointer overflow-hidden will-change-transform"
           >
             <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-amber-400/70 to-transparent pointer-events-none" />
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -257,7 +259,7 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
                       type: 'spring',
                       stiffness: 380,
                       damping: 18,
-                      delay: 0.1 + i * 0.07,
+                      delay: 0.05 + i * 0.04,
                     }}
                   >
                     <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-amber-400 text-amber-400 drop-shadow-[0_2px_6px_rgba(245,158,11,0.35)]" />
@@ -276,8 +278,10 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
           <motion.div
             variants={fadeUpVariant}
             custom={0.06}
+            whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleSelectTab('แฟนคลับ / ผู้ชม')}
-            className="group relative bg-white/95 backdrop-blur-xl border border-rose-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_12px_28px_-12px_rgba(244,63,94,0.10)] hover:-translate-y-0.5 hover:border-rose-300 transition-all duration-200 cursor-pointer overflow-hidden"
+            className="group relative bg-white/95 backdrop-blur-xl border border-rose-200/80 hover:border-rose-400/90 rounded-2xl p-4 sm:p-5 shadow-[0_10px_25px_-10px_rgba(244,63,94,0.10)] hover:shadow-[0_16px_32px_-10px_rgba(244,63,94,0.20)] transition-[border-color,box-shadow] duration-200 cursor-pointer overflow-hidden will-change-transform"
           >
             <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-rose-400/60 to-transparent pointer-events-none" />
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -308,8 +312,10 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
           <motion.div
             variants={fadeUpVariant}
             custom={0.12}
+            whileHover={{ y: -4, transition: { duration: 0.2, ease: 'easeOut' } }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleSelectTab('all')}
-            className="group relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-2xl p-4 sm:p-5 shadow-[0_12px_28px_-12px_rgba(16,185,129,0.10)] hover:-translate-y-0.5 hover:border-emerald-300 transition-all duration-200 cursor-pointer overflow-hidden"
+            className="group relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 hover:border-emerald-400/90 rounded-2xl p-4 sm:p-5 shadow-[0_10px_25px_-10px_rgba(16,185,129,0.10)] hover:shadow-[0_16px_32px_-10px_rgba(16,185,129,0.20)] transition-[border-color,box-shadow] duration-200 cursor-pointer overflow-hidden will-change-transform"
           >
             <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-emerald-400/60 to-transparent pointer-events-none" />
             <div className="flex items-center justify-between gap-2 mb-2">

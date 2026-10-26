@@ -273,7 +273,9 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
             <motion.div
               variants={fadeUpVariant}
               custom={0}
-              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(15,23,42,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:-translate-y-1 hover:border-slate-300 transition-all duration-200 relative overflow-hidden group"
+              whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 hover:border-slate-400/80 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(15,23,42,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:shadow-[0_18px_36px_-12px_rgba(15,23,42,0.14)] transition-[border-color,box-shadow] duration-200 relative overflow-hidden group cursor-pointer will-change-transform"
             >
               <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-slate-400/60 to-transparent pointer-events-none" />
               <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -304,7 +306,9 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
             <motion.div
               variants={fadeUpVariant}
               custom={0.06}
-              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(15,23,42,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:-translate-y-1 hover:border-slate-300 transition-all duration-200 relative overflow-hidden group"
+              whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 hover:border-slate-400/80 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(15,23,42,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:shadow-[0_18px_36px_-12px_rgba(15,23,42,0.14)] transition-[border-color,box-shadow] duration-200 relative overflow-hidden group cursor-pointer will-change-transform"
             >
               <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-slate-400/60 to-transparent pointer-events-none" />
               <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -333,7 +337,9 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
             <motion.div
               variants={fadeUpVariant}
               custom={0.12}
-              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(16,185,129,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:-translate-y-1 hover:border-emerald-300 transition-all duration-200 relative overflow-hidden group"
+              whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(16,185,129,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:shadow-[0_18px_36px_-12px_rgba(16,185,129,0.16)] transition-[border-color,box-shadow] duration-200 relative overflow-hidden group cursor-pointer will-change-transform"
             >
               <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-emerald-300/60 to-transparent pointer-events-none" />
               <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -363,7 +369,9 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
             <motion.div
               variants={fadeUpVariant}
               custom={0.18}
-              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(245,158,11,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:-translate-y-1 hover:border-amber-300 transition-all duration-200 relative overflow-hidden group"
+              whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+              whileTap={{ scale: 0.98 }}
+              className="bg-white/90 backdrop-blur-xl border border-slate-200/90 hover:border-amber-300 rounded-2xl p-4 sm:p-5 shadow-[0_12px_30px_-12px_rgba(245,158,11,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:shadow-[0_18px_36px_-12px_rgba(245,158,11,0.16)] transition-[border-color,box-shadow] duration-200 relative overflow-hidden group cursor-pointer will-change-transform"
             >
               <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-amber-300/60 to-transparent pointer-events-none" />
               <div className="flex items-center justify-between gap-2 mb-2.5">
@@ -486,7 +494,7 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
                     viewport={REPEAT_VIEWPORT}
                     variants={fadeUpVariant}
                     custom={0.05}
-                    className="relative bg-white/95 backdrop-blur-xl border border-amber-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(245,158,11,0.12)]"
+                    className="relative bg-white/95 backdrop-blur-xl border border-amber-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(245,158,11,0.12)] will-change-transform"
                   >
                     <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-amber-300/70 to-transparent pointer-events-none" />
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
@@ -529,7 +537,7 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
                     viewport={REPEAT_VIEWPORT}
                     variants={fadeUpVariant}
                     custom={0.1}
-                    className="relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(16,185,129,0.12)]"
+                    className="relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(16,185,129,0.12)] will-change-transform"
                   >
                     <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-emerald-300/70 to-transparent pointer-events-none" />
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
@@ -572,7 +580,7 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
                     viewport={REPEAT_VIEWPORT}
                     variants={fadeUpVariant}
                     custom={0.14}
-                    className="relative bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(100,116,139,0.14)]"
+                    className="relative bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(100,116,139,0.14)] will-change-transform"
                   >
                     <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-slate-300/80 to-transparent pointer-events-none" />
                     <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">

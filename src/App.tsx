@@ -33,6 +33,7 @@ import {
 } from './data/creatorData';
 import { OriginalPdfModal } from './components/OriginalPdfModal';
 import { MediaLightboxModal } from './components/MediaLightboxModal';
+import { ViralPhoneModal } from './components/ViralPhoneModal';
 import { BrandDetailModal } from './components/BrandDetailModal';
 import { BookingQuoteModal } from './components/BookingQuoteModal';
 import { AdminStudioModal } from './components/AdminStudioModal';
@@ -623,10 +624,11 @@ export default function App() {
         creatorName={`${currentCreator.nameTh} (${currentCreator.nameEn})`}
       />
 
-      <MediaLightboxModal
+      <ViralPhoneModal
         item={lightboxItem}
         onClose={() => setLightboxItem(null)}
         onBookSimilar={(title) => handleOpenBookingForPackage(selectedPackageId, title)}
+        onOpenAdmin={() => openAdminAtTab('media')}
       />
 
       <BrandDetailModal

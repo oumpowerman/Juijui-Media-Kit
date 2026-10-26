@@ -241,9 +241,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   key={idx}
                   variants={fadeUpVariant}
                   custom={idx * 0.07}
-                  whileHover={{ y: -5 }}
-                  transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-                  className="bg-white/88 backdrop-blur-md border border-white/95 rounded-2xl p-4 sm:p-5 2xl:p-6 hover:border-violet-300 transition-all shadow-[0_12px_28px_-8px_rgba(79,70,229,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)] flex flex-col justify-between relative overflow-hidden group"
+                  whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-white/88 backdrop-blur-md border border-white/95 rounded-2xl p-4 sm:p-5 2xl:p-6 hover:border-violet-300 hover:shadow-[0_16px_32px_-8px_rgba(79,70,229,0.12),inset_0_1px_1.5px_rgba(255,255,255,1)] transition-[border-color,box-shadow] duration-200 will-change-transform cursor-pointer flex flex-col justify-between relative overflow-hidden group shadow-[0_12px_28px_-8px_rgba(79,70,229,0.08),inset_0_1px_1.5px_rgba(255,255,255,1)]"
                 >
                   {/* Subtle Top Specular Glass Line */}
                   <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/90 to-transparent pointer-events-none" />

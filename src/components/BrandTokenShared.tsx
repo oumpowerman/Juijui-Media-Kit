@@ -401,7 +401,7 @@ export const LogoFirstBrandToken: React.FC<LogoFirstBrandTokenProps> = ({
           borderBottomWidth: tier === 'vip' ? '4px' : '3px',
           borderBottomColor: tier === 'vip' ? '#F59E0B' : brandColor,
         }}
-        className={`group relative ${sizeClasses} bg-white border-2 ${meta.ringClass} transition-all duration-200 hover:-translate-y-1 hover:shadow-lg active:scale-95 active:translate-y-0 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer overflow-visible flex items-center justify-center`}
+        className={`group relative ${sizeClasses} bg-white border-2 ${meta.ringClass} transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:shadow-lg active:scale-95 active:translate-y-0 ease-[cubic-bezier(0.16,1,0.3,1)] cursor-pointer overflow-visible flex items-center justify-center`}
       >
         {/* Inner clipped logo canvas */}
         <div className="w-full h-full rounded-[inherit] overflow-hidden relative">

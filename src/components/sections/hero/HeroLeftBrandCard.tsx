@@ -167,8 +167,9 @@ export const HeroLeftBrandCard: React.FC<HeroLeftBrandCardProps> = ({
                     delay: 0.08 + idx * 0.07,
                     ease: EASE_OUT_EXPO,
                   }}
-                  whileHover={{ y: -4 }}
-                  className="p-4 sm:p-4.5 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/50 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.03),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:border-slate-300/80 hover:bg-white/95 hover:shadow-[0_10px_24px_-6px_rgba(0,0,0,0.05),inset_0_1px_2px_rgba(255,255,255,1)] transition-all duration-300 flex flex-col justify-between group relative overflow-hidden"
+                  whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
+                  whileTap={{ scale: 0.98 }}
+                  className="p-4 sm:p-4.5 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/50 shadow-[0_4px_16px_-4px_rgba(0,0,0,0.03),inset_0_1px_1.5px_rgba(255,255,255,1)] hover:border-slate-300/80 hover:bg-white/95 hover:shadow-[0_10px_24px_-6px_rgba(0,0,0,0.05),inset_0_1px_2px_rgba(255,255,255,1)] transition-[border-color,background-color,box-shadow] duration-200 will-change-transform cursor-pointer flex flex-col justify-between group relative overflow-hidden"
                 >
                   {/* Frosted Slab Bevel Highlight */}
                   <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white to-transparent pointer-events-none" />

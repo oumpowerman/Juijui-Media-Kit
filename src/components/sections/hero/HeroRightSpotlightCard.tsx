@@ -413,8 +413,9 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                     duration: 0.45,
                     ease: EASE_OUT_EXPO,
                   }}
-                  whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.13)' }}
-                  className="p-2.5 rounded-2xl bg-white/[0.07] hover:bg-white/[0.13] backdrop-blur-md border border-white/12 hover:border-amber-400/40 flex items-center justify-between gap-3 group transition-all duration-200 cursor-pointer shadow-2xs relative"
+                  whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.13)', transition: { duration: 0.18, ease: 'easeOut' } }}
+                  whileTap={{ scale: 0.98 }}
+                  className="p-2.5 rounded-2xl bg-white/[0.07] hover:bg-white/[0.13] backdrop-blur-md border border-white/12 hover:border-amber-400/40 flex items-center justify-between gap-3 group transition-[border-color,box-shadow] duration-200 will-change-transform cursor-pointer shadow-2xs relative"
                   title={`เปิดไปยังช่อง ${plat.name}: ${plat.url}`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">

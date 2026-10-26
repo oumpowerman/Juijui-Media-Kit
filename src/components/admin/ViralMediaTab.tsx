@@ -5,6 +5,10 @@ import {
   Edit3,
   Pin,
   Image as ImageIcon,
+  Video as VideoIcon,
+  Play,
+  Film,
+  Sparkles,
   X,
   Check,
   Search,
@@ -15,6 +19,7 @@ import {
   ViralWorkItem,
   resolveGoogleDriveImage,
   extractGoogleDriveId,
+  resolveVideoSource,
 } from '../../data/creatorData';
 import { PlatformBrandIcon } from '../ui/PlatformBrandIcon';
 
@@ -36,6 +41,7 @@ interface ViralMediaTabProps {
     category: string;
     tiktokUrl: string;
     driveImageUrl?: string;
+    driveVideoUrl?: string;
     isPinned?: boolean;
     topCommentUser?: string;
     topCommentText?: string;
@@ -66,6 +72,8 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
   const [category, setCategory] = useState('Lifestyle & Comedy');
   const [tiktokUrl, setTiktokUrl] = useState('https://www.tiktok.com/@juijui.j');
   const [driveImageUrl, setDriveImageUrl] = useState('');
+  const [driveVideoUrl, setDriveVideoUrl] = useState('');
+  const [showVideoTest, setShowVideoTest] = useState(false);
   const [isPinned, setIsPinned] = useState(true);
   const [topCommentUser, setTopCommentUser] = useState('@fanclub_juijui');
   const [topCommentText, setTopCommentText] = useState('');
@@ -86,6 +94,8 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
       setCategory(editingMediaItem.category);
       setTiktokUrl(editingMediaItem.tiktokUrl || 'https://www.tiktok.com/@juijui.j');
       setDriveImageUrl(editingMediaItem.driveImageUrl || '');
+      setDriveVideoUrl(editingMediaItem.driveVideoUrl || '');
+      setShowVideoTest(false);
       setIsPinned(Boolean(editingMediaItem.isPinned));
       setTopCommentUser(editingMediaItem.topComments?.[0]?.user || '@fanclub_juijui');
       setTopCommentText(editingMediaItem.topComments?.[0]?.text || '');
@@ -102,6 +112,8 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
       setCategory('Lifestyle & Comedy');
       setTiktokUrl('https://www.tiktok.com/@juijui.j');
       setDriveImageUrl('');
+      setDriveVideoUrl('');
+      setShowVideoTest(false);
       setIsPinned(true);
       setTopCommentUser('@fanclub_juijui');
       setTopCommentText('');
@@ -126,6 +138,7 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
       category,
       tiktokUrl,
       driveImageUrl,
+      driveVideoUrl,
       isPinned,
       topCommentUser,
       topCommentText,
@@ -133,6 +146,7 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
   };
 
   const driveIdPreview = extractGoogleDriveId(driveImageUrl);
+  const videoSourcePreview = resolveVideoSource(driveVideoUrl);
   const filteredWorks = viralWorks.filter((w) => {
     if (formatFilter === 'pinned' && !w.isPinned) return false;
     if (formatFilter === 'vertical' && (w.orientation || 'vertical') !== 'vertical') return false;
@@ -355,6 +369,93 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
         </div>
 
         <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+              <VideoIcon className="w-3.5 h-3.5 text-rose-600" />
+              <span>ลิงก์วิดีโอ In-App Preview (Google Drive หรือ MP4)</span>
+            </label>
+            {driveVideoUrl.trim() && (
+              <button
+                type="button"
+                onClick={() => setShowVideoTest(!showVideoTest)}
+                className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+              >
+                <Play className="w-3 h-3" />
+                <span>{showVideoTest ? 'ซ่อนตัวทดสอบวิดีโอ' : 'ทดสอบเล่นวิดีโอ (Live Test)'}</span>
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            value={driveVideoUrl}
+            onChange={(e) => setDriveVideoUrl(e.target.value)}
+            placeholder="วางลิงก์ Google Drive (เช่น https://drive.google.com/file/d/.../view) หรือไฟล์ .mp4"
+            className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50/70 focus:bg-white border border-slate-300"
+          />
+          <p className="text-[10px] text-slate-500 mt-1">
+            💡 คำแนะนำ: สำหรับ Google Drive ให้ตั้งค่าการแชร์ไฟล์เป็น <b>"ทุกคนที่มีลิงก์มีสิทธิ์ดู" (Anyone with the link)</b> เพื่อให้สามารถเล่นสตรีมบนหน้าจอสมาร์ตโฟนได้ทันที
+          </p>
+
+          {driveVideoUrl.trim() && (
+            <div className="mt-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+              <div className="flex items-center justify-between text-[11px]">
+                <p className="font-semibold text-emerald-700 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  {videoSourcePreview.type === 'drive'
+                    ? `พร้อมพรีวิวผ่าน Google Drive Embed (ID: ${videoSourcePreview.fileId})`
+                    : videoSourcePreview.type === 'direct'
+                    ? 'พร้อมพรีวิวผ่าน Direct HTML5 Video'
+                    : videoSourcePreview.type === 'youtube'
+                    ? 'พร้อมพรีวิวผ่าน YouTube Embed'
+                    : 'ลิงก์วิดีโอพร้อมแสดงผล'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowVideoTest(!showVideoTest)}
+                  className="px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 font-semibold cursor-pointer"
+                >
+                  {showVideoTest ? 'ปิดพรีวิว' : 'เปิดทดสอบเล่น'}
+                </button>
+              </div>
+
+              {showVideoTest && (
+                <div className="mt-2.5 pt-2.5 border-t border-slate-200">
+                  <div className="w-full max-w-[280px] mx-auto aspect-[9/16] bg-black rounded-xl overflow-hidden shadow-md relative">
+                    {videoSourcePreview.type === 'drive' ? (
+                      <iframe
+                        src={videoSourcePreview.embedUrl}
+                        title="Drive Video Test"
+                        allow="autoplay; fullscreen"
+                        className="w-full h-full border-0"
+                      />
+                    ) : videoSourcePreview.type === 'direct' ? (
+                      <video
+                        src={videoSourcePreview.src}
+                        controls
+                        autoPlay
+                        loop
+                        className="w-full h-full object-cover"
+                      />
+                    ) : videoSourcePreview.type === 'youtube' ? (
+                      <iframe
+                        src={videoSourcePreview.embedUrl}
+                        title="YouTube Test"
+                        allow="autoplay; encrypted-media"
+                        className="w-full h-full border-0"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-slate-400 p-4 text-center">
+                        ไม่สามารถเล่นวิดีโอจากลิงก์นี้ได้โดยตรง
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             ลิงก์คลิปต้นฉบับ (TikTok / YouTube / Reels)
           </label>
@@ -531,6 +632,11 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
                       </span>
                       {work.isPinned && (
                         <span className="text-[11px] font-bold text-amber-600">★ Pinned</span>
+                      )}
+                      {work.driveVideoUrl && (
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">
+                          <Film className="w-2.5 h-2.5" /> วิดีโอ In-App
+                        </span>
                       )}
                       <p className="text-xs font-bold text-slate-900 truncate">{work.title}</p>
                     </div>

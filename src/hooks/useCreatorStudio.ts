@@ -372,11 +372,13 @@ export function useCreatorStudio({
       category: string;
       tiktokUrl: string;
       driveImageUrl?: string;
+      driveVideoUrl?: string;
       isPinned?: boolean;
       topCommentUser?: string;
       topCommentText?: string;
     }) => {
       const cleanDriveUrl = payload.driveImageUrl?.trim() || undefined;
+      const cleanDriveVideoUrl = payload.driveVideoUrl?.trim() || undefined;
       const isEditing = Boolean(payload.id);
       const existingItem = isEditing
         ? draftCreator.viralWorks.find((w) => w.id === payload.id)
@@ -402,6 +404,7 @@ export function useCreatorStudio({
         isFeatured: true,
         thumbnailUrl: resolvedThumb,
         driveImageUrl: cleanDriveUrl,
+        driveVideoUrl: cleanDriveVideoUrl || existingItem?.driveVideoUrl,
         tiktokUrl: payload.tiktokUrl.trim() || 'https://www.tiktok.com/@juijui.j',
         topComments: payload.topCommentText?.trim()
           ? [
