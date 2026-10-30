@@ -230,44 +230,10 @@
         },
         "status": {
           "type": "string",
-          "enum": ["รอดำเนินการ", "ยืนยันคิวงานแล้ว", "ส่งใบเสนอราคาแล้ว", "กำลังผลิตคอนเทนต์", "ส่งมอบงานสำเร็จ"]
+          "enum": ["รอดำเนินการ", "ยืนยันคิวงานแล้ว", "กำลังผลิตคอนเทนต์", "ส่งมอบงานสำเร็จ"]
         }
       },
       "required": ["id", "quoteNumber", "creatorId", "brandName", "contactChannel", "totalPrice", "status"]
-    },
-    "SyncSnapshot": {
-      "title": "SyncSnapshot",
-      "description": "Historical snapshot of platform statistics before a live API sync or rollback (up to 5 versions).",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "maxLength": 128,
-          "pattern": "^[a-zA-Z0-9_\\-]+$"
-        },
-        "timestamp": {
-          "type": "string",
-          "maxLength": 100
-        },
-        "dateFormatted": {
-          "type": "string",
-          "maxLength": 200
-        },
-        "triggerType": {
-          "type": "string",
-          "enum": ["official_api", "simulation", "manual_rollback"]
-        },
-        "summary": {
-          "type": "object"
-        },
-        "platformsSnapshot": {
-          "type": "array"
-        },
-        "overviewSnapshot": {
-          "type": "object"
-        }
-      },
-      "required": ["id", "timestamp", "dateFormatted", "triggerType", "summary", "platformsSnapshot", "overviewSnapshot"]
     },
     "AdminUser": {
       "title": "AdminUser",
@@ -298,10 +264,6 @@
     "/bookings/{bookingId}": {
       "schema": { "$ref": "#/entities/BookingRecord" },
       "description": "Stores client booking and quotation requests."
-    },
-    "/syncHistory/{snapshotId}": {
-      "schema": { "$ref": "#/entities/SyncSnapshot" },
-      "description": "Stores up to 5 historical snapshots for platform statistics rollback."
     },
     "/admins/{adminUid}": {
       "schema": { "$ref": "#/entities/AdminUser" },

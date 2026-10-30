@@ -5,14 +5,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  collection,
-  doc,
-  onSnapshot,
-  setDoc,
-  deleteDoc,
-} from 'firebase/firestore';
-import { db, sanitizeForFirestore } from '../firebase';
 import { CreatorProfile, PlatformStat } from '../data/types';
 import {
   PlatformApiCredentials,
@@ -32,10 +24,11 @@ import {
 } from '../services/platformApiService';
 
 const CREDENTIALS_STORAGE_KEY = 'juijui_platform_api_credentials';
+const HISTORY_STORAGE_KEY = 'juijui_platform_sync_history';
 const MAX_HISTORY_ITEMS = 5;
 
 export function usePlatformSync() {
-  // Credentials state
+  // Credentials state with localStorage persistence
   const [credentials, setCredentials] = useState<PlatformApiCredentials>(() => {
     try {
       const stored = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
@@ -48,24 +41,19 @@ export function usePlatformSync() {
     return DEFAULT_API_CREDENTIALS;
   });
 
-  // History ring buffer (max 5 items synced via Firebase Cloud Firestore)
-  const [syncHistory, setSyncHistory] = useState<SyncSnapshotHistoryItem[]>([]);
-
-  useEffect(() => {
-    const unsubHistory = onSnapshot(
-      collection(db, 'syncHistory'),
-      (snapshot) => {
-        const items = snapshot.docs
-          .map((d) => d.data() as SyncSnapshotHistoryItem)
-          .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-        setSyncHistory(items.slice(0, MAX_HISTORY_ITEMS));
-      },
-      (err) => {
-        console.warn('Firestore syncHistory listener notice:', err.message);
+  // History ring buffer (max 5 items)
+  const [syncHistory, setSyncHistory] = useState<SyncSnapshotHistoryItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed.slice(0, MAX_HISTORY_ITEMS);
       }
-    );
-    return () => unsubHistory();
-  }, []);
+    } catch {
+      // Fallback
+    }
+    return [];
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [diffItems, setDiffItems] = useState<PlatformDiffItem[] | null>(null);
@@ -284,21 +272,16 @@ export function usePlatformSync() {
     }
   }, []);
 
-  // Persist history ring buffer directly to Firebase Cloud Firestore (max 5 items)
+  // Persist history ring buffer
   const pushToHistory = useCallback((item: SyncSnapshotHistoryItem) => {
-    const cleanItem = sanitizeForFirestore(item);
-    setDoc(doc(db, 'syncHistory', cleanItem.id), cleanItem).catch((err) => {
-      console.warn('Firestore syncHistory save error:', err);
-    });
-
     setSyncHistory((prev) => {
-      const merged = [cleanItem, ...prev.filter((h) => h.id !== cleanItem.id)];
-      const kept = merged.slice(0, MAX_HISTORY_ITEMS);
-      const overflow = merged.slice(MAX_HISTORY_ITEMS);
-      overflow.forEach((oldItem) => {
-        deleteDoc(doc(db, 'syncHistory', oldItem.id)).catch(() => {});
-      });
-      return kept;
+      const updated = [item, ...prev.filter((h) => h.id !== item.id)].slice(0, MAX_HISTORY_ITEMS);
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore storage error
+      }
+      return updated;
     });
   }, []);
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles } from 'lucide-react';
 import { CreatorProfile, BookingRecord } from '../data/creatorData';
 import { EASE_OUT_EXPO } from './sections/motionVariants';
-import { db, doc, setDoc, sanitizeForFirestore } from './firestoreBookingHelper';
+import { db, doc, setDoc } from './firestoreBookingHelper';
 import {
   generatePlainQuoteText,
   BookingModalHeader,
@@ -195,8 +195,23 @@ export const BookingQuoteModal: React.FC<BookingQuoteModalProps> = ({
         status: 'รอดำเนินการ',
       };
 
-      // Persist directly to Firebase Cloud Firestore (shared across all visitors)
-      await setDoc(doc(db, 'bookings', clientBooking.id), sanitizeForFirestore(clientBooking));
+      // 1. Persist directly to Firebase Firestore (works on Vercel & everywhere)
+      try {
+        await setDoc(doc(db, 'bookings', clientBooking.id), clientBooking);
+      } catch (fsErr) {
+        console.warn('Firestore booking sync notice:', fsErr);
+      }
+
+      // 2. Optional local Express backend sync (non-blocking if deployed on Vercel static hosting)
+      try {
+        await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clientBooking),
+        });
+      } catch {
+        // Ignore on static hosting (e.g. Vercel)
+      }
 
       setSubmittedBooking(clientBooking);
       setCurrentStep(3);

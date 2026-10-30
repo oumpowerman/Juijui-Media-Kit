@@ -1,4 +1,4 @@
 import { doc, setDoc } from 'firebase/firestore';
-import { db, sanitizeForFirestore } from '../firebase';
+import { db } from '../firebase';
 
-export { db, doc, setDoc, sanitizeForFirestore };
+export { db, doc, setDoc };

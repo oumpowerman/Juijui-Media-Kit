@@ -51,18 +51,7 @@ service cloud.firestore {
         data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 300 &&
         data.contactChannel is string && data.contactChannel.size() >= 1 && data.contactChannel.size() <= 300 &&
         data.totalPrice is number && data.totalPrice >= 0 &&
-        data.status in ['รอดำเนินการ', 'ยืนยันคิวงานแล้ว', 'ส่งใบเสนอราคาแล้ว', 'กำลังผลิตคอนเทนต์', 'ส่งมอบงานสำเร็จ'];
-    }
-
-    function isValidSyncSnapshot(data) {
-      return data.keys().hasAll(['id', 'timestamp', 'dateFormatted', 'triggerType', 'summary', 'platformsSnapshot', 'overviewSnapshot']) &&
-        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
-        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 100 &&
-        data.dateFormatted is string && data.dateFormatted.size() >= 1 && data.dateFormatted.size() <= 200 &&
-        data.triggerType in ['official_api', 'simulation', 'manual_rollback'] &&
-        data.summary is map &&
-        data.platformsSnapshot is list && data.platformsSnapshot.size() <= 20 &&
-        data.overviewSnapshot is map;
+        data.status in ['รอดำเนินการ', 'ยืนยันคิวงานแล้ว', 'กำลังผลิตคอนเทนต์', 'ส่งมอบงานสำเร็จ'];
     }
 
     function isValidAdmin(data) {
@@ -73,31 +62,22 @@ service cloud.firestore {
     }
 
     // 4. Collection Rules
-    // Publicly viewable Media Kit profiles; validated schema writes for real-time Cloud sync across all domains
+    // Publicly viewable Media Kit profiles; editable strictly by Admin
     match /creators/{creatorId} {
       allow get: if isValidId(creatorId);
       allow list: if resource.data.id is string && resource.data.id.size() <= 128;
-      allow create: if isValidId(creatorId) && isValidCreator(incoming());
-      allow update: if isValidId(creatorId) && isValidCreator(incoming()) && incoming().id == existing().id;
+      allow create: if isValidId(creatorId) && isAdmin() && isValidCreator(incoming());
+      allow update: if isValidId(creatorId) && isAdmin() && isValidCreator(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(creatorId) && isAdmin();
     }
 
-    // Client bookings: Validated booking quote requests and status updates
+    // Client bookings: Anyone can submit a valid booking quote request; only Admin can read/manage bookings (PII Isolation)
     match /bookings/{bookingId} {
-      allow get: if isValidId(bookingId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow get: if isValidId(bookingId) && isAdmin();
+      allow list: if isAdmin() && resource.data.id is string;
       allow create: if isValidId(bookingId) && isValidBooking(incoming());
-      allow update: if isValidId(bookingId) && isValidBooking(incoming()) && incoming().id == existing().id;
+      allow update: if isValidId(bookingId) && isAdmin() && isValidBooking(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(bookingId) && isAdmin();
-    }
-
-    // Platform API Sync History (5-version rollback ring buffer stored on Cloud Firestore)
-    match /syncHistory/{snapshotId} {
-      allow get: if isValidId(snapshotId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
-      allow create: if isValidId(snapshotId) && isValidSyncSnapshot(incoming());
-      allow update: if isValidId(snapshotId) && isValidSyncSnapshot(incoming()) && incoming().id == existing().id;
-      allow delete: if isValidId(snapshotId);
     }
 
     // Admin registry

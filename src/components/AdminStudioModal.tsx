@@ -209,21 +209,23 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                     </h3>
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold ${
-                        isCloudConnected
+                        adminUser
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                           : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}
                     >
                       <Cloud className="w-3.5 h-3.5" />
                       <span>
-                        {isCloudConnected
-                          ? 'Firebase Cloud Sync (ออนไลน์ 100% · ทุกคนเห็นข้อมูลเดียวกัน)'
-                          : 'กำลังเชื่อมต่อ Firebase Cloud...'}
+                        {adminUser
+                          ? `Firestore Cloud Sync (ล็อกอินแล้ว)`
+                          : isCloudConnected
+                          ? 'Local Storage (เชื่อมต่อ Firebase แล้ว · ล็อกอิน Google เพื่อ Sync Cloud)'
+                          : 'Local Storage Cache (รีเฟรชไม่หาย)'}
                       </span>
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 truncate mt-0.5">
-                    บันทึกข้อมูลตรงเข้าฐานข้อมูลกลาง Firebase Cloud Firestore ทันที (ไม่พึ่งพา Localhost · ทุกคนที่เปิดเว็บเห็นข้อมูลเดียวกัน 100%)
+                    ระบบจัดการข้อมูล Media Kit & Rate Card บันทึกลงเครื่องอัตโนมัติ และซิงค์ Firestore Cloud ทันทีเมื่อล็อกอิน
                   </p>
                 </div>
               </div>
