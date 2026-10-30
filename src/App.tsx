@@ -73,14 +73,51 @@ function withBrandDefaults(creator: CreatorProfile): CreatorProfile {
   };
 }
 
+const LOCAL_STORAGE_CREATORS_KEY = 'juijui_creators_store';
+const LOCAL_STORAGE_BOOKINGS_KEY = 'juijui_bookings_store';
+
+function getStoredCreators(): CreatorProfile[] {
+  if (typeof window === 'undefined') return INITIAL_CREATORS;
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_CREATORS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(withBrandDefaults);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse local storage creators:', e);
+  }
+  return INITIAL_CREATORS;
+}
+
+function getStoredBookings(): BookingRecord[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_BOOKINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.warn('Failed to parse local storage bookings:', e);
+  }
+  return [];
+}
+
 export default function App() {
-  const [creators, setCreators] = useState<CreatorProfile[]>(INITIAL_CREATORS);
-  const [activeCreatorId, setActiveCreatorId] = useState<string>(INITIAL_CREATORS[0].id);
-  const [bookings, setBookings] = useState<BookingRecord[]>([]);
+  const [creators, setCreators] = useState<CreatorProfile[]>(getStoredCreators);
+  const [activeCreatorId, setActiveCreatorId] = useState<string>(() => {
+    const list = getStoredCreators();
+    return list[0]?.id || INITIAL_CREATORS[0].id;
+  });
+  const [bookings, setBookings] = useState<BookingRecord[]>(getStoredBookings);
 
   // Firebase Auth & Cloud Firestore state
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
+  const [authErrorNotice, setAuthErrorNotice] = useState<string | null>(null);
 
   // Interactive selections for Rate Card & Quote Calculator
   const [selectedPackageId, setSelectedPackageId] = useState<string>('pkg-standard');
@@ -224,9 +261,14 @@ export default function App() {
             withBrandDefaults(d.data() as CreatorProfile)
           );
           setCreators(loadedCreators);
+          try {
+            localStorage.setItem(LOCAL_STORAGE_CREATORS_KEY, JSON.stringify(loadedCreators));
+          } catch (e) {
+            console.warn('Failed to cache creators to localStorage:', e);
+          }
         } else if (auth.currentUser) {
-          // Auto-seed initial creator profile into Firestore when admin is signed in and collection is empty
-          INITIAL_CREATORS.forEach((c) => {
+          // Auto-seed current creators into Firestore when admin is signed in and collection is empty
+          creators.forEach((c) => {
             setDoc(doc(db, 'creators', c.id), c).catch(() => {});
           });
         }
@@ -237,13 +279,12 @@ export default function App() {
     );
 
     return () => unsubCreators();
-  }, [isCloudConnected]);
+  }, [isCloudConnected, creators]);
 
   // 3. Real-time Firestore /bookings listener when Admin is signed in
   useEffect(() => {
     if (!adminUser) return;
 
-    // Also ensure initial creator exists in Firestore if admin just logged in
     const unsubBookings = onSnapshot(
       collection(db, 'bookings'),
       (snapshot) => {
@@ -252,6 +293,11 @@ export default function App() {
             (d) => d.data() as BookingRecord
           );
           setBookings(loadedBookings);
+          try {
+            localStorage.setItem(LOCAL_STORAGE_BOOKINGS_KEY, JSON.stringify(loadedBookings));
+          } catch (e) {
+            console.warn('Failed to cache bookings to localStorage:', e);
+          }
         }
       },
       (error) => {
@@ -304,8 +350,18 @@ export default function App() {
   };
 
   const handleSaveCreator = async (updated: CreatorProfile) => {
-    // 1. Update local state & server store immediately
-    setCreators((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    // 1. Update local React state & LocalStorage cache immediately (preserves edits across refresh on Vercel)
+    setCreators((prev) => {
+      const next = prev.map((c) => (c.id === updated.id ? updated : c));
+      try {
+        localStorage.setItem(LOCAL_STORAGE_CREATORS_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+      return next;
+    });
+
+    // 2. Try Express server API (works in dev environment, fails silently on static Vercel)
     try {
       await fetch(`/api/creators/${updated.id}`, {
         method: 'PUT',
@@ -313,10 +369,10 @@ export default function App() {
         body: JSON.stringify(updated),
       });
     } catch {
-      // ignore local server fallback error
+      // ignore local server fallback error on static hosting
     }
 
-    // 2. If signed in as Admin on Firebase, persist to Firestore /creators/{id}
+    // 3. If signed in as Admin on Firebase, persist to Firestore Cloud /creators/{id}
     if (auth.currentUser) {
       try {
         await setDoc(doc(db, 'creators', updated.id), updated);
@@ -334,7 +390,15 @@ export default function App() {
       nameTh: partial.nameTh || 'ครีเอเตอร์ใหม่',
     };
 
-    setCreators((prev) => [...prev, created]);
+    setCreators((prev) => {
+      const next = [...prev, created];
+      try {
+        localStorage.setItem(LOCAL_STORAGE_CREATORS_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+      return next;
+    });
     setActiveCreatorId(created.id);
 
     if (auth.currentUser) {
@@ -361,15 +425,21 @@ export default function App() {
     status: BookingRecord['status']
   ) => {
     let updatedBooking: BookingRecord | undefined;
-    setBookings((prev) =>
-      prev.map((b) => {
+    setBookings((prev) => {
+      const next = prev.map((b) => {
         if (b.id === bookingId) {
           updatedBooking = { ...b, status };
           return updatedBooking;
         }
         return b;
-      })
-    );
+      });
+      try {
+        localStorage.setItem(LOCAL_STORAGE_BOOKINGS_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn('LocalStorage save error:', e);
+      }
+      return next;
+    });
 
     if (auth.currentUser && updatedBooking) {
       try {
@@ -395,6 +465,13 @@ export default function App() {
     setCreators(freshDefaults);
     setActiveCreatorId(freshDefaults[0].id);
 
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_CREATORS_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_BOOKINGS_KEY);
+    } catch (e) {
+      console.warn('LocalStorage reset error:', e);
+    }
+
     if (auth.currentUser) {
       for (const c of freshDefaults) {
         try {
@@ -413,6 +490,7 @@ export default function App() {
   };
 
   const handleLoginGoogle = async () => {
+    setAuthErrorNotice(null);
     try {
       const user = await signInAdminWithGoogle();
       if (user) {
@@ -425,8 +503,9 @@ export default function App() {
           }
         }
       }
-    } catch {
-      // Ignore user-cancelled popup
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setAuthErrorNotice(msg);
     }
   };
 
@@ -679,6 +758,8 @@ export default function App() {
         bookings={bookings}
         adminUser={adminUser}
         isCloudConnected={isCloudConnected}
+        authErrorNotice={authErrorNotice}
+        onClearAuthError={() => setAuthErrorNotice(null)}
         onLoginGoogle={handleLoginGoogle}
         onLogoutGoogle={signOutAdmin}
         onSaveCreator={handleSaveCreator}

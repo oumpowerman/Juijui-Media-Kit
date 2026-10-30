@@ -103,8 +103,16 @@ export async function signInAdminWithGoogle(): Promise<User | null> {
     ) {
       return null;
     }
+    if (errCode === 'auth/unauthorized-domain') {
+      const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+      const domainError = new Error(
+        `โดเมน "${currentHost}" ยังไม่ได้รับอนุญาตใน Firebase Console! กรุณาไปที่ Firebase Console > Authentication > Settings > Authorized domains แล้วเพิ่มโดเมน "${currentHost}" เพื่อเปิดให้แอดมินล็อกอินบันทึกข้อมูลได้`
+      );
+      (domainError as unknown as { code?: string }).code = 'auth/unauthorized-domain';
+      throw domainError;
+    }
     console.warn('Google sign-in warning:', errMsg);
-    return null;
+    throw error;
   }
 }
 
