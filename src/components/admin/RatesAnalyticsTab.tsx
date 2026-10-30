@@ -7,11 +7,15 @@ import {
   Layers,
   Users,
   Sparkles,
+  RefreshCw,
+  ArrowRight,
 } from 'lucide-react';
 import { CreatorProfile, RatePackage, AddOnItem, PlatformStat } from '../../data/creatorData';
+import { AdminTabType } from '../../hooks/useCreatorStudio';
 import { PlatformBrandIcon } from '../ui/PlatformBrandIcon';
 
 interface RatesAnalyticsTabProps {
+  onNavigateTab?: (tab: AdminTabType) => void;
   draftCreator: CreatorProfile;
   isSaving: boolean;
   hasUnsavedChanges: boolean;
@@ -50,6 +54,7 @@ interface RatesAnalyticsTabProps {
 type RatesSubSection = 'all' | 'packages' | 'addons' | 'stats' | 'demographics';
 
 export const RatesAnalyticsTab: React.FC<RatesAnalyticsTabProps> = ({
+  onNavigateTab,
   draftCreator,
   onUpdatePackageField,
   onUpdateAddOnField,
@@ -485,6 +490,33 @@ export const RatesAnalyticsTab: React.FC<RatesAnalyticsTabProps> = ({
               ตัวเลขทั้งหมดแสดงผลด้วยฟอนต์ Tabular Numerals บนหน้าเว็บเพื่อความแม่นยำระดับเอเจนซี่
             </p>
           </div>
+
+          {/* Quick Sync Shortcut Banner */}
+          {onNavigateTab && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-violet-50/70 border border-violet-200/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <RefreshCw className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-violet-950">
+                    ดึงสถิติสดอัตโนมัติทั้ง 4 แพลตฟอร์มด้วย Official API
+                  </p>
+                  <p className="text-[11px] text-violet-700">
+                    มีระบบพรีวิวเปรียบเทียบ (Diff) และประวัติย้อนหลัง 5 เวอร์ชัน
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('sync')}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span>เปิดแท็บ 08 (API Sync)</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Overview KPI Row (All 6 fields) */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-4 rounded-xl bg-slate-50/70 border border-slate-200">

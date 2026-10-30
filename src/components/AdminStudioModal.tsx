@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -16,6 +16,7 @@ import {
   Save,
   RotateCcw,
   Briefcase,
+  RefreshCw,
 } from 'lucide-react';
 import {
   CreatorProfile,
@@ -24,6 +25,7 @@ import {
   INITIAL_CREATORS,
 } from '../data/creatorData';
 import { useCreatorStudio, AdminTabType } from '../hooks/useCreatorStudio';
+import { usePlatformSync } from '../hooks/usePlatformSync';
 import { ProfileIdentityTab } from './admin/ProfileIdentityTab';
 import { RatesAnalyticsTab } from './admin/RatesAnalyticsTab';
 import { ViralMediaTab } from './admin/ViralMediaTab';
@@ -31,6 +33,7 @@ import { BrandPartnersTab } from './admin/BrandPartnersTab';
 import { CommentsProofTab } from './admin/CommentsProofTab';
 import { BookingsLedgerTab } from './admin/BookingsLedgerTab';
 import { RosterBackupTab } from './admin/RosterBackupTab';
+import { PlatformSyncTab } from './admin/PlatformSyncTab';
 import { EASE_OUT_EXPO } from './sections/motionVariants';
 import { User } from '../firebase';
 
@@ -63,6 +66,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
     onLogoutGoogle,
   } = props;
   const studio = useCreatorStudio(props);
+  const platformSync = usePlatformSync();
   const [authLoading, setAuthLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -75,6 +79,23 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
       setAuthLoading(false);
     }
   };
+
+  // Lock body scroll while Admin modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, [isOpen]);
 
   const TABS: {
     id: AdminTabType;
@@ -129,6 +150,12 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
       label: 'ครีเอเตอร์ & สำรองข้อมูล',
       badge: `${studio.allCreators.length}`,
       icon: Users,
+    },
+    {
+      id: 'sync',
+      step: '08',
+      label: 'ดึงข้อมูลสด (API Sync)',
+      icon: RefreshCw,
     },
   ];
 
@@ -323,6 +350,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
 
                   {studio.activeTab === 'rates' && (
                     <RatesAnalyticsTab
+                      onNavigateTab={studio.setActiveTab}
                       draftCreator={studio.draftCreator}
                       isSaving={studio.isSaving}
                       hasUnsavedChanges={studio.hasUnsavedChanges}
@@ -399,6 +427,37 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                       onCreateNewRosterCreator={studio.createNewRosterCreator}
                       onExportCreatorJson={studio.exportCreatorJson}
                       onImportCreatorJson={studio.importCreatorJson}
+                    />
+                  )}
+
+                  {studio.activeTab === 'sync' && (
+                    <PlatformSyncTab
+                      draftCreator={studio.draftCreator}
+                      credentials={platformSync.credentials}
+                      syncHistory={platformSync.syncHistory}
+                      diffItems={platformSync.diffItems}
+                      isLoading={platformSync.isLoading}
+                      syncError={platformSync.syncError}
+                      lastSyncTimestamp={platformSync.lastSyncTimestamp}
+                      activeSyncMode={platformSync.activeSyncMode}
+                      onUpdateCredentials={platformSync.updateCredentials}
+                      onExecuteSync={platformSync.executeSync}
+                      onToggleDiffSelection={platformSync.toggleDiffSelection}
+                      onToggleSelectAll={platformSync.toggleSelectAll}
+                      onClearDiff={platformSync.clearDiff}
+                      onApplyDiff={platformSync.applyDiff}
+                      onRollbackToSnapshot={platformSync.rollbackToSnapshot}
+                      saveDraftChanges={studio.saveDraftChanges}
+                      tiktokOAuth={platformSync.tiktokOAuth}
+                      onConnectTikTok={platformSync.connectTikTok}
+                      onDisconnectTikTok={platformSync.disconnectTikTok}
+                      onRefreshTikTokToken={platformSync.refreshTikTokToken}
+                      onSaveTikTokConfig={platformSync.saveTikTokConfig}
+                      singleTestLoading={platformSync.singleTestLoading}
+                      singleTestResults={platformSync.singleTestResults}
+                      onTestSinglePlatform={platformSync.testSinglePlatformFn}
+                      onClearSingleTestResult={platformSync.clearSingleTestResult}
+                      onApplySinglePlatformToDiff={platformSync.applySinglePlatformToDiff}
                     />
                   )}
                 </motion.div>

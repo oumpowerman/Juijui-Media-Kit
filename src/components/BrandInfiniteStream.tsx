@@ -3,14 +3,6 @@ import {
   BrandCollaborationItem,
   resolveGoogleDriveImage,
 } from '../data/creatorData';
-import { BrandHoverDetailCard } from './BrandTokenShared';
-
-interface HoveredSeamTokenState {
-  keyId: string;
-  brand: BrandCollaborationItem;
-  anchorX: number;
-  notchAlign?: 'center' | 'left' | 'right';
-}
 
 interface BrandInfiniteStreamProps {
   brands: BrandCollaborationItem[];
@@ -21,17 +13,28 @@ interface BrandInfiniteStreamProps {
 
 /**
  * Individual Logo Item on the Infinite Stream:
- * - Natural PNG silhouette (`object-contain`) when a PNG/image URL is provided,
- *   or a clean circular (`rounded-full`) brand logo emblem as fallback.
+ * - Natural PNG silhouette (`object-contain`) or clean circular emblem fallback.
  * - Brand name badge positioned at the bottom-center of the logo (`ชื่ออยู่ตรงโลโก้ล่างกลาง`).
- * - No campaign count or numbers shown on the stream item (`ไม่ต้องบอกจำนวน แค่ให้เห็นโลโก้ก็พอ`).
+ * - Rich, tactile interactive hover effects:
+ *   lifts (-translate-y-2), scales up (scale-115), glows with ambient drop-shadow,
+ *   badge transforms to vibrant violet, and cursor feedback.
+ * - Zero intrusive tooltips/popovers for a clean, uninterrupted browsing experience.
  */
 const StreamLogoNode: React.FC<{
   brand: BrandCollaborationItem;
   isHovered: boolean;
+  hasAnyHovered: boolean;
   onSelect: () => void;
-  onHoverEnter: (el: HTMLElement) => void;
-}> = ({ brand, isHovered, onSelect, onHoverEnter }) => {
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
+}> = ({
+  brand,
+  isHovered,
+  hasAnyHovered,
+  onSelect,
+  onHoverStart,
+  onHoverEnd,
+}) => {
   const [imgError, setImgError] = useState(false);
   const resolvedLogo = brand.logoUrl
     ? resolveGoogleDriveImage(brand.logoUrl)
@@ -42,23 +45,30 @@ const StreamLogoNode: React.FC<{
     <button
       type="button"
       onClick={onSelect}
-      onMouseEnter={(e) => onHoverEnter(e.currentTarget)}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
       aria-label={brand.brandName}
-      className={`group relative flex flex-col items-center justify-center shrink-0 pt-1 pb-3 px-1 transition-all duration-200 cursor-pointer focus:outline-none ${
+      className={`group relative flex flex-col items-center justify-center shrink-0 pt-2 pb-3.5 px-2 transition-all duration-300 ease-out cursor-pointer focus:outline-none select-none ${
         isHovered
-          ? 'opacity-100 saturate-100 scale-110 z-30'
-          : 'opacity-75 saturate-[0.8] hover:opacity-100 hover:saturate-100 hover:scale-105'
+          ? 'opacity-100 saturate-110 -translate-y-2 scale-115 z-30'
+          : hasAnyHovered
+          ? 'opacity-55 saturate-[0.7] scale-95'
+          : 'opacity-85 saturate-[0.85] hover:opacity-100 hover:saturate-100'
       }`}
     >
       {/* Circular Logo or Natural Transparent PNG Silhouette */}
       {resolvedLogo && !imgError ? (
-        <div className="relative w-13 h-13 sm:w-15 sm:h-15 flex items-center justify-center">
+        <div className="relative w-13 h-13 sm:w-15 sm:h-15 flex items-center justify-center transition-transform duration-300">
           <img
             src={resolvedLogo}
             alt={brand.brandName}
             referrerPolicy="no-referrer"
             draggable={false}
-            className="w-full h-full object-contain drop-shadow-xs select-none pointer-events-none transition-transform duration-200"
+            className={`w-full h-full object-contain pointer-events-none transition-all duration-300 ${
+              isHovered
+                ? 'drop-shadow-[0_12px_22px_rgba(109,40,217,0.32)] brightness-105'
+                : 'drop-shadow-xs'
+            }`}
             loading="lazy"
             onError={() => setImgError(true)}
           />
@@ -66,15 +76,20 @@ const StreamLogoNode: React.FC<{
       ) : (
         <div
           style={{
-            background: `radial-gradient(circle at 32% 28%, #FFFFFF 0%, ${accentColor}15 68%, ${accentColor}2E 100%)`,
+            background: `radial-gradient(circle at 32% 28%, #FFFFFF 0%, ${accentColor}18 68%, ${accentColor}30 100%)`,
             borderColor: isHovered ? accentColor : `${accentColor}40`,
+            boxShadow: isHovered
+              ? `0 12px 24px -4px ${accentColor}45, 0 4px 10px -2px rgba(0,0,0,0.06)`
+              : undefined,
           }}
-          className="relative w-13 h-13 sm:w-15 sm:h-15 rounded-full border bg-white shadow-2xs flex items-center justify-center overflow-hidden transition-all duration-200"
+          className={`relative w-13 h-13 sm:w-15 sm:h-15 rounded-full border bg-white flex items-center justify-center overflow-hidden transition-all duration-300 ${
+            isHovered ? 'border-2' : 'shadow-2xs'
+          }`}
         >
           {/* Subtle Inner Circular Sheen */}
           <div
-            style={{ borderColor: `${accentColor}22` }}
-            className="w-[82%] h-[82%] rounded-full border border-dashed flex items-center justify-center px-1.5"
+            style={{ borderColor: `${accentColor}25` }}
+            className="w-[82%] h-[82%] rounded-full border border-dashed flex items-center justify-center px-1.5 transition-transform duration-300"
           >
             <span
               style={{ color: accentColor }}
@@ -88,9 +103,9 @@ const StreamLogoNode: React.FC<{
 
       {/* Brand Name Centered at Bottom of Logo (ชื่ออยู่ตรงโลโก้ล่างกลาง) */}
       <div
-        className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 z-20 px-2 py-0.5 rounded-full border text-[10px] font-bold leading-tight whitespace-nowrap max-w-[94px] truncate text-center transition-all duration-200 ${
+        className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 z-20 px-2 py-0.5 rounded-full border text-[10px] font-bold leading-tight whitespace-nowrap max-w-[96px] truncate text-center transition-all duration-300 ${
           isHovered
-            ? 'bg-violet-700 text-white border-violet-700 shadow-xs'
+            ? 'bg-violet-700 text-white border-violet-700 shadow-md scale-105'
             : 'bg-white/95 text-slate-700 border-slate-200/90 shadow-2xs'
         }`}
       >
@@ -102,25 +117,19 @@ const StreamLogoNode: React.FC<{
 
 /**
  * Minimal Section-Seam Brand Conveyor Belt
- * Renders circular / natural-shape PNG brand logos flowing continuously with
- * the brand name centered at the bottom of each logo.
+ * Continuously flows brand logos across the section with seamless wrap-around.
+ * Provides instant tactile hover reactions directly on each logo without obscuring tooltips.
  */
 export const BrandInfiniteStream: React.FC<BrandInfiniteStreamProps> = ({
   brands,
   onSelectBrand,
   direction = 'left',
-  tooltipPosition = 'top',
 }) => {
-  const seamRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const offsetRef = useRef<number>(0);
   const currentVelRef = useRef<number>(0.6);
   const isSeamHoveredRef = useRef<boolean>(false);
-  const [hoveredToken, setHoveredToken] = useState<HoveredSeamTokenState | null>(
-    null
-  );
-  const [isExiting, setIsExiting] = useState(false);
-  const exitTimerRef = useRef<number | null>(null);
+  const [hoveredKeyId, setHoveredKeyId] = useState<string | null>(null);
 
   // Ensure enough items in one cycle so wide & ultrawide (2560px–3840px+) viewports never see a seam gap
   const singleSet = useMemo(() => {
@@ -146,8 +155,8 @@ export const BrandInfiniteStream: React.FC<BrandInfiniteStreamProps> = ({
       const dt = Math.min(2.5, (now - lastTime) / 16.667);
       lastTime = now;
 
-      // Decelerate smoothly when hovering any brand on the seam
-      const targetVel = isSeamHoveredRef.current ? 0.04 : baseSpeed;
+      // Decelerate smoothly to a slow crawl when hovering over the conveyor seam or any brand item
+      const targetVel = isSeamHoveredRef.current ? 0.08 : baseSpeed;
       currentVelRef.current += (targetVel - currentVelRef.current) * 0.12;
 
       if (Math.abs(currentVelRef.current) > 0.005 && trackRef.current) {
@@ -172,81 +181,16 @@ export const BrandInfiniteStream: React.FC<BrandInfiniteStreamProps> = ({
     return () => cancelAnimationFrame(rafId);
   }, [direction]);
 
-  useEffect(() => {
-    return () => {
-      if (exitTimerRef.current) {
-        clearTimeout(exitTimerRef.current);
-      }
-    };
-  }, []);
-
-  const handleMouseEnterItem = (
-    keyId: string,
-    brand: BrandCollaborationItem,
-    el: HTMLElement
-  ) => {
-    if (!seamRef.current) return;
-
-    if (exitTimerRef.current) {
-      clearTimeout(exitTimerRef.current);
-      exitTimerRef.current = null;
-    }
-    setIsExiting(false);
-
-    const seamRect = seamRef.current.getBoundingClientRect();
-    const itemRect = el.getBoundingClientRect();
-    const tooltipHalfWidth = 160;
-    const screenMargin = 20;
-
-    // Center of item relative to the viewport
-    const itemCenterScreen = itemRect.left + itemRect.width * 0.5;
-
-    // Clamped screen center so the tooltip is guaranteed never to clip off-screen
-    const clampedScreenCenter = Math.max(
-      tooltipHalfWidth + screenMargin,
-      Math.min(
-        window.innerWidth - tooltipHalfWidth - screenMargin,
-        itemCenterScreen
-      )
-    );
-
-    // Coordinate relative to seam container
-    const anchorX = clampedScreenCenter - seamRect.left;
-
-    // Detect if notch should offset slightly when clamped at edges
-    const screenDiff = itemCenterScreen - clampedScreenCenter;
-    let notchAlign: 'center' | 'left' | 'right' = 'center';
-    if (screenDiff < -24) {
-      notchAlign = 'left';
-    } else if (screenDiff > 24) {
-      notchAlign = 'right';
-    }
-
-    setHoveredToken({
-      keyId,
-      brand,
-      anchorX,
-      notchAlign,
-    });
-  };
-
   if (brands.length === 0) return null;
 
   return (
     <div
-      ref={seamRef}
       onMouseEnter={() => {
         isSeamHoveredRef.current = true;
       }}
       onMouseLeave={() => {
         isSeamHoveredRef.current = false;
-        if (hoveredToken) {
-          setIsExiting(true);
-          exitTimerRef.current = window.setTimeout(() => {
-            setHoveredToken(null);
-            setIsExiting(false);
-          }, 180);
-        }
+        setHoveredKeyId(null);
       }}
       className="relative w-full bg-transparent py-2.5 overflow-visible select-none"
     >
@@ -260,53 +204,28 @@ export const BrandInfiniteStream: React.FC<BrandInfiniteStreamProps> = ({
       <div className="w-full overflow-hidden">
         <div
           ref={trackRef}
-          className="flex items-center gap-5 sm:gap-7 w-max will-change-transform py-1 px-4"
+          className="flex items-center gap-5 sm:gap-7 w-max will-change-transform py-2 px-4"
         >
           {loopItems.map((brand, idx) => {
             const keyId = `${brand.id}-seam-${idx}`;
-            const isHovered = hoveredToken?.keyId === keyId;
+            const isHovered = hoveredKeyId === keyId;
 
             return (
               <StreamLogoNode
                 key={keyId}
                 brand={brand}
                 isHovered={isHovered}
+                hasAnyHovered={hoveredKeyId !== null}
                 onSelect={() => onSelectBrand(brand)}
-                onHoverEnter={(el) => handleMouseEnterItem(keyId, brand, el)}
+                onHoverStart={() => setHoveredKeyId(keyId)}
+                onHoverEnd={() => {
+                  setHoveredKeyId((curr) => (curr === keyId ? null : curr));
+                }}
               />
             );
           })}
         </div>
       </div>
-
-      {/* Floating Unclipped Hover Tooltip with Apple iOS Frosted Glass & Edge Clamping & Spring Exit */}
-      {hoveredToken && (
-        <div
-          style={
-            tooltipPosition === 'bottom'
-              ? {
-                  left: `${hoveredToken.anchorX}px`,
-                  bottom: '-12px',
-                  transform: 'translate(-50%, 100%)',
-                }
-              : {
-                  left: `${hoveredToken.anchorX}px`,
-                  top: '-12px',
-                  transform: 'translate(-50%, -100%)',
-                }
-          }
-          className="absolute z-35 pointer-events-none hidden sm:block"
-        >
-          <BrandHoverDetailCard
-            brand={hoveredToken.brand}
-            position={tooltipPosition}
-            notchAlign={hoveredToken.notchAlign || 'center'}
-            onSelectBrand={onSelectBrand}
-            isExiting={isExiting}
-          />
-        </div>
-      )}
     </div>
   );
 };
-

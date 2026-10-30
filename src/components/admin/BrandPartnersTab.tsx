@@ -92,6 +92,8 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
   const [clip1Views, setClip1Views] = useState('850K');
   const [clip1Url, setClip1Url] = useState('https://www.tiktok.com/@juijui.j');
   const [clip1Format, setClip1Format] = useState('Comedy Sitcom (9:16)');
+  const [clip1Desc, setClip1Desc] = useState('');
+  const [clip1Campaign, setClip1Campaign] = useState('');
 
   useEffect(() => {
     if (editingBrandItem) {
@@ -118,12 +120,16 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
         setClip1Views(firstClip.views);
         setClip1Url(firstClip.url);
         setClip1Format(firstClip.formatTag);
+        setClip1Desc(firstClip.description || '');
+        setClip1Campaign(firstClip.campaignName || '');
       } else {
         setClip1Title('');
         setClip1Platform('TikTok');
         setClip1Views('500K');
         setClip1Url('https://www.tiktok.com/@juijui.j');
         setClip1Format('Short Video (9:16)');
+        setClip1Desc('');
+        setClip1Campaign('');
       }
     } else {
       setBrandName('');
@@ -146,6 +152,8 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
       setClip1Views('750K');
       setClip1Url('https://www.tiktok.com/@juijui.j');
       setClip1Format('Comedy Sitcom (9:16)');
+      setClip1Desc('');
+      setClip1Campaign('');
     }
   }, [editingBrandItem]);
 
@@ -167,6 +175,8 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
             views: clip1Views.trim() || '500K',
             url: clip1Url.trim() || 'https://www.tiktok.com/@juijui.j',
             formatTag: clip1Format.trim() || 'Short Video',
+            description: clip1Desc.trim() || undefined,
+            campaignName: clip1Campaign.trim() || undefined,
           },
           ...(editingBrandItem?.sampleClips?.slice(1) || []),
         ]
@@ -563,13 +573,34 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
                 className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
               />
             </div>
-            <input
-              type="text"
-              value={clip1Url}
-              onChange={(e) => setClip1Url(e.target.value)}
-              placeholder="ลิงก์คลิปจริง https://www.tiktok.com/..."
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <input
+                type="text"
+                value={clip1Campaign}
+                onChange={(e) => setClip1Campaign(e.target.value)}
+                placeholder="ชื่อแคมเปญ (เช่น แคมเปญบักเก็ตเพื่อนซี้)"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+              />
+              <input
+                type="text"
+                value={clip1Url}
+                onChange={(e) => setClip1Url(e.target.value)}
+                placeholder="ลิงก์คลิปจริง https://www.tiktok.com/..."
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+              />
+            </div>
+            <textarea
+              rows={2}
+              value={clip1Desc}
+              onChange={(e) => setClip1Desc(e.target.value)}
+              placeholder="คำบรรยายเฉพาะของคลิปนี้ (วัตถุประสงค์ / Hook / จุดขาย)..."
               className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
             />
+            {editingBrandItem?.sampleClips && editingBrandItem.sampleClips.length > 1 && (
+              <div className="pt-1 text-[11px] text-violet-700 font-medium">
+                ✓ แบรนด์นี้มีคลิปสะสมทั้งหมด {editingBrandItem.sampleClips.length} คลิป (ระบบแสดงผลใน Modal ครบทุกคลิป)
+              </div>
+            )}
           </div>
 
           {/* Client Quote Optional */}

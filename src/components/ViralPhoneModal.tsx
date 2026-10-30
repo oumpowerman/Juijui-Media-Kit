@@ -111,16 +111,30 @@ export const ViralPhoneModal: React.FC<ViralPhoneModalProps> = ({
   const heartIdCounter = useRef(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Close on Escape key
+  // Lock body scroll and close on Escape key
   useEffect(() => {
+    if (!item) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+    };
+  }, [item, onClose]);
 
   // Spawn continuous live streaming hearts floating upward from bottom right
   useEffect(() => {

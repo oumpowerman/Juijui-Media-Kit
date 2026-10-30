@@ -22,7 +22,8 @@ export type AdminTabType =
   | 'brands'
   | 'comments'
   | 'bookings'
-  | 'roster';
+  | 'roster'
+  | 'sync';
 
 interface UseCreatorStudioParams {
   creator: CreatorProfile;

@@ -482,166 +482,258 @@ export const BrandCollaborationsSection: React.FC<BrandCollaborationsSectionProp
             </div>
           </motion.div>
 
-          {/* 5. 3-TIERED LOGO SHOWCASE (Parallax + Scroll-Triggered Card Reveals) */}
+          {/* 5. 3-TIERED LOGO SHOWCASE (Parallax + Seamless Spring Category Transitions) */}
           <motion.div style={{ y: tiersParallaxY }}>
-            {filteredBrands.length > 0 ? (
-              <div className="space-y-6 2xl:space-y-8">
-                {/* Tier 1: VIP Partners (5+ Campaigns — Largest XL Logos) */}
-                {tieredGroups.vip.length > 0 && (
-                  <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={REPEAT_VIEWPORT}
-                    variants={fadeUpVariant}
-                    custom={0.05}
-                    className="relative bg-white/95 backdrop-blur-xl border border-amber-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(245,158,11,0.12)] will-change-transform"
-                  >
-                    <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-amber-300/70 to-transparent pointer-events-none" />
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                          <Crown className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                            ระดับที่ 1 · VIP Flagship Partners (ร่วมงาน 5 ครั้งขึ้นไป)
-                          </h3>
-                          <p className="text-xs text-slate-500">
-                            แบรนด์หลักที่ไว้วางใจจ้างซ้ำสูงสุด · ชี้เมาส์ที่โลโก้เพื่อดูยอดวิวและคลิกเพื่อดูคลิปตัวอย่าง
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-mono-num font-semibold text-amber-800">
-                        {tieredGroups.vip.length} แบรนด์
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-5 sm:gap-6 2xl:gap-7 pt-1 pb-3">
-                      {tieredGroups.vip.map((brand) => (
-                        <LogoFirstBrandToken
-                          key={brand.id}
-                          brand={brand}
-                          sizeOverride="vip"
-                          onSelectBrand={onSelectBrand}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Tier 2: Regular Repeat Partners (3–4 Campaigns — Medium MD Logos) */}
-                {tieredGroups.repeat.length > 0 && (
-                  <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={REPEAT_VIEWPORT}
-                    variants={fadeUpVariant}
-                    custom={0.1}
-                    className="relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(16,185,129,0.12)] will-change-transform"
-                  >
-                    <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-emerald-300/70 to-transparent pointer-events-none" />
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                          <Repeat className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                            ระดับที่ 2 · Regular Repeat Partners (ร่วมงาน 3–4 ครั้ง)
-                          </h3>
-                          <p className="text-xs text-slate-500">
-                            ลูกค้าประจำที่กลับมาจ้างซ้ำต่อเนื่องจากผลลัพธ์แคมเปญที่คุ้มค่า
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-mono-num font-semibold text-emerald-800">
-                        {tieredGroups.repeat.length} แบรนด์
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 sm:gap-5 2xl:gap-6 pt-1 pb-3">
-                      {tieredGroups.repeat.map((brand) => (
-                        <LogoFirstBrandToken
-                          key={brand.id}
-                          brand={brand}
-                          sizeOverride="repeat"
-                          onSelectBrand={onSelectBrand}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Tier 3: Trusted Brand Partners (1–2 Campaigns — Compact SM Logos) */}
-                {tieredGroups.standard.length > 0 && (
-                  <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={REPEAT_VIEWPORT}
-                    variants={fadeUpVariant}
-                    custom={0.14}
-                    className="relative bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(100,116,139,0.14)] will-change-transform"
-                  >
-                    <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-slate-300/80 to-transparent pointer-events-none" />
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
-                          <CheckCircle2 className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="text-sm sm:text-base font-bold text-slate-900">
-                            ระดับที่ 3 · Trusted Brand Partners (ร่วมงาน 1–2 ครั้ง)
-                          </h3>
-                          <p className="text-xs text-slate-500">
-                            พาร์ทเนอร์แบรนด์ชั้นนำจากหลากหลายอุตสาหกรรม จัดเรียงขนาดกะทัดรัดดูง่าย
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-mono-num font-semibold text-slate-600">
-                        {tieredGroups.standard.length} แบรนด์
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3.5 sm:gap-4 2xl:gap-5 pt-1 pb-3">
-                      {tieredGroups.standard.map((brand) => (
-                        <LogoFirstBrandToken
-                          key={brand.id}
-                          brand={brand}
-                          sizeOverride="standard"
-                          onSelectBrand={onSelectBrand}
-                        />
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            ) : (
-              /* Empty Filter State */
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
-                className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-3xl p-10 text-center my-4 shadow-2xs"
-              >
-                <p className="text-sm font-bold text-slate-800 mb-1">
-                  ไม่พบรายชื่อแบรนด์ที่ตรงกับตัวกรอง
-                </p>
-                <p className="text-xs text-slate-500 mb-4">
-                  ลองเปลี่ยนคำค้นหา หรือกดดูหมวดหมู่ทั้งหมด
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory('ALL');
-                    setRepeatOnly(false);
-                    setSearchQuery('');
-                  }}
-                  className="px-4 py-2 rounded-xl bg-[#1E1B4B] text-white text-xs font-semibold cursor-pointer"
+            <AnimatePresence mode="wait">
+              {filteredBrands.length > 0 ? (
+                <motion.div
+                  key="brand-showcase-tiers-wrapper"
+                  layout="position"
+                  className="relative space-y-6 2xl:space-y-8"
                 >
-                  แสดงแบรนด์ทั้งหมด ({brands.length})
-                </button>
-              </motion.div>
-            )}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {/* Tier 1: VIP Partners (5+ Campaigns — Largest XL Logos) */}
+                    {tieredGroups.vip.length > 0 && (
+                      <motion.div
+                        key="tier-1-vip"
+                        layout
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{
+                          opacity: 0,
+                          y: -14,
+                          scale: 0.98,
+                          transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        transition={{
+                          layout: { type: 'spring', stiffness: 320, damping: 30 },
+                          opacity: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                          scale: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        className="relative bg-white/95 backdrop-blur-xl border border-amber-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(245,158,11,0.12)] will-change-transform"
+                      >
+                        <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-amber-300/70 to-transparent pointer-events-none" />
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                              <Crown className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                ระดับที่ 1 · VIP Flagship Partners (ร่วมงาน 5 ครั้งขึ้นไป)
+                              </h3>
+                              <p className="text-xs text-slate-500">
+                                แบรนด์หลักที่ไว้วางใจจ้างซ้ำสูงสุด · ชี้เมาส์ที่โลโก้เพื่อดูยอดวิวและคลิกเพื่อดูคลิปตัวอย่าง
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-mono-num font-semibold text-amber-800">
+                            {tieredGroups.vip.length} แบรนด์
+                          </span>
+                        </div>
+
+                        <motion.div
+                          layout
+                          className="flex flex-wrap items-center gap-5 sm:gap-6 2xl:gap-7 pt-1 pb-3"
+                        >
+                          <AnimatePresence mode="popLayout">
+                            {tieredGroups.vip.map((brand) => (
+                              <motion.div
+                                key={brand.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.85 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.18 } }}
+                                transition={{
+                                  layout: { type: 'spring', stiffness: 350, damping: 28 },
+                                  opacity: { duration: 0.22 },
+                                  scale: { duration: 0.22 },
+                                }}
+                              >
+                                <LogoFirstBrandToken
+                                  brand={brand}
+                                  sizeOverride="vip"
+                                  onSelectBrand={onSelectBrand}
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </motion.div>
+                      </motion.div>
+                    )}
+
+                    {/* Tier 2: Regular Repeat Partners (3–4 Campaigns — Medium MD Logos) */}
+                    {tieredGroups.repeat.length > 0 && (
+                      <motion.div
+                        key="tier-2-repeat"
+                        layout
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{
+                          opacity: 0,
+                          y: -14,
+                          scale: 0.98,
+                          transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        transition={{
+                          layout: { type: 'spring', stiffness: 320, damping: 30 },
+                          opacity: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                          scale: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        className="relative bg-white/95 backdrop-blur-xl border border-emerald-200/80 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(16,185,129,0.12)] will-change-transform"
+                      >
+                        <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-emerald-300/70 to-transparent pointer-events-none" />
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                              <Repeat className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                ระดับที่ 2 · Regular Repeat Partners (ร่วมงาน 3–4 ครั้ง)
+                              </h3>
+                              <p className="text-xs text-slate-500">
+                                ลูกค้าประจำที่กลับมาจ้างซ้ำต่อเนื่องจากผลลัพธ์แคมเปญที่คุ้มค่า
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-mono-num font-semibold text-emerald-800">
+                            {tieredGroups.repeat.length} แบรนด์
+                          </span>
+                        </div>
+
+                        <motion.div
+                          layout
+                          className="flex flex-wrap items-center gap-4 sm:gap-5 2xl:gap-6 pt-1 pb-3"
+                        >
+                          <AnimatePresence mode="popLayout">
+                            {tieredGroups.repeat.map((brand) => (
+                              <motion.div
+                                key={brand.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.85 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.18 } }}
+                                transition={{
+                                  layout: { type: 'spring', stiffness: 350, damping: 28 },
+                                  opacity: { duration: 0.22 },
+                                  scale: { duration: 0.22 },
+                                }}
+                              >
+                                <LogoFirstBrandToken
+                                  brand={brand}
+                                  sizeOverride="repeat"
+                                  onSelectBrand={onSelectBrand}
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </motion.div>
+                      </motion.div>
+                    )}
+
+                    {/* Tier 3: Trusted Brand Partners (1–2 Campaigns — Compact SM Logos) */}
+                    {tieredGroups.standard.length > 0 && (
+                      <motion.div
+                        key="tier-3-standard"
+                        layout
+                        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{
+                          opacity: 0,
+                          y: -14,
+                          scale: 0.98,
+                          transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        transition={{
+                          layout: { type: 'spring', stiffness: 320, damping: 30 },
+                          opacity: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                          scale: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        className="relative bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-3xl p-5 sm:p-6 2xl:p-8 shadow-[0_18px_45px_-15px_rgba(15,23,42,0.07)] transition-shadow duration-300 hover:shadow-[0_24px_55px_-15px_rgba(100,116,139,0.14)] will-change-transform"
+                      >
+                        <div className="absolute inset-x-8 top-0 h-[1.5px] bg-linear-to-r from-transparent via-slate-300/80 to-transparent pointer-events-none" />
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                ระดับที่ 3 · Trusted Brand Partners (ร่วมงาน 1–2 ครั้ง)
+                              </h3>
+                              <p className="text-xs text-slate-500">
+                                พาร์ทเนอร์แบรนด์ชั้นนำจากหลากหลายอุตสาหกรรม จัดเรียงขนาดกะทัดรัดดูง่าย
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-xs font-mono-num font-semibold text-slate-600">
+                            {tieredGroups.standard.length} แบรนด์
+                          </span>
+                        </div>
+
+                        <motion.div
+                          layout
+                          className="flex flex-wrap items-center gap-3.5 sm:gap-4 2xl:gap-5 pt-1 pb-3"
+                        >
+                          <AnimatePresence mode="popLayout">
+                            {tieredGroups.standard.map((brand) => (
+                              <motion.div
+                                key={brand.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.85 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.18 } }}
+                                transition={{
+                                  layout: { type: 'spring', stiffness: 350, damping: 28 },
+                                  opacity: { duration: 0.22 },
+                                  scale: { duration: 0.22 },
+                                }}
+                              >
+                                <LogoFirstBrandToken
+                                  brand={brand}
+                                  sizeOverride="standard"
+                                  onSelectBrand={onSelectBrand}
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ) : (
+                /* Empty Filter State */
+                <motion.div
+                  key="empty-brand-filter-state"
+                  layout="position"
+                  initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-3xl p-10 text-center my-4 shadow-2xs"
+                >
+                  <p className="text-sm font-bold text-slate-800 mb-1">
+                    ไม่พบรายชื่อแบรนด์ที่ตรงกับตัวกรอง
+                  </p>
+                  <p className="text-xs text-slate-500 mb-4">
+                    ลองเปลี่ยนคำค้นหา หรือกดดูหมวดหมู่ทั้งหมด
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('ALL');
+                      setRepeatOnly(false);
+                      setSearchQuery('');
+                    }}
+                    className="px-4 py-2 rounded-xl bg-[#1E1B4B] text-white text-xs font-semibold cursor-pointer"
+                  >
+                    แสดงแบรนด์ทั้งหมด ({brands.length})
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         </div>
       </div>

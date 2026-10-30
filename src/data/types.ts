@@ -104,6 +104,10 @@ export interface BrandSampleClip {
   url: string;
   formatTag: string;
   duration?: string;
+  description?: string;
+  campaignName?: string;
+  driveVideoUrl?: string;
+  thumbnailUrl?: string;
 }
 
 export type BrandCategoryType =

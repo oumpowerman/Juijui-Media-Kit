@@ -1,6 +1,6 @@
 {
-  "summary":  "แผนการพัฒนาระบบ In-App Viral Video Preview บนหน้าจอสมาร์ตโฟน (TikTok/Reels UI) พร้อมแอนิเมชันหัวใจลอยพวยพุ่งสไตล์ไลฟ์สด รองรับการเล่นวิดีโอจาก Google Drive และ Direct Video Links และเชื่อมต่อฐานข้อมูล Firestore สำหรับจัดการคลิปผ่าน Admin Studio",
-  "updatedAt":  "2026-10-26T15:18:11.020171094Z",
+  "summary":  "แผนงานติดตั้งระบบ TikTok OAuth 2.0 เชื่อมต่ออัตโนมัติ (Connect TikTok) ตามมาตรฐาน Official API พร้อมหน้าต่าง Popup, ระบบ Backend Token Exchange, การบันทึก Token อัตโนมัติ และช่องกรอกสำรองสำหรับโหมดทดสอบ Sandbox",
+  "updatedAt":  "2026-10-30T11:51:44.428578737Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

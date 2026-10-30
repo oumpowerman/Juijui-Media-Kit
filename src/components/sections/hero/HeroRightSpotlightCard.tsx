@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   motion,
   MotionValue,
@@ -98,8 +98,31 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
     mouseY.set(0.5);
   };
 
+  // Sort platforms descending by verified followers count
+  const sortedPlatforms = useMemo(() => {
+    return [...currentCreator.platforms]
+      .map((plat) => {
+        let num = plat.followersNum;
+        if (!num || num <= 0) {
+          const clean = (plat.followers || '').toUpperCase().trim();
+          if (clean.endsWith('M')) {
+            num = parseFloat(clean.replace('M', '')) * 1_000_000;
+          } else if (clean.endsWith('K')) {
+            num = parseFloat(clean.replace('K', '')) * 1_000;
+          } else {
+            num = parseFloat(clean.replace(/[^0-9.]/g, '')) || 0;
+          }
+        }
+        return {
+          ...plat,
+          numericFollowers: num || 0,
+        };
+      })
+      .sort((a, b) => b.numericFollowers - a.numericFollowers);
+  }, [currentCreator.platforms]);
+
   const maxPlatformFollowers = Math.max(
-    ...currentCreator.platforms.map((p) => p.followersNum || 100000),
+    ...sortedPlatforms.map((p) => p.numericFollowers).filter(Boolean),
     100000
   );
 
@@ -368,7 +391,7 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               </motion.div>
-              <span>ช่องทางโซเชียลมีเดีย (คลิกเพื่อเข้าชมช่อง)</span>
+              <span>ช่องทางโซเชียลมีเดีย (เรียงตามผู้ติดตาม)</span>
             </div>
 
             {/* Subtle sparkle near platform header */}
@@ -393,11 +416,58 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
           </div>
 
           <div className="space-y-2.5">
-            {currentCreator.platforms.map((plat, pIdx) => {
+            {sortedPlatforms.map((plat, pIdx) => {
+              const rank = pIdx + 1;
               const barPercent = Math.min(
                 100,
-                Math.max(16, Math.round(((plat.followersNum || 80000) / maxPlatformFollowers) * 100))
+                Math.max(16, Math.round(((plat.numericFollowers || 80000) / maxPlatformFollowers) * 100))
               );
+
+              // 4 Distinct Metallic / Tier Border Styles: Gold (1), Silver (2), Sky Blue (3), Neutral Glass (4+)
+              const tierStyles = (() => {
+                switch (rank) {
+                  case 1:
+                    return {
+                      card: 'bg-linear-to-r from-amber-400/16 via-white/[0.10] to-amber-500/12 backdrop-blur-xl border-2 border-amber-400/70 hover:border-amber-300 shadow-[0_4px_22px_-3px_rgba(245,158,11,0.25),inset_0_1px_2px_rgba(255,255,255,0.4)]',
+                      name: 'text-white group-hover:text-amber-200',
+                      handle: 'text-amber-200/80 group-hover:text-amber-100',
+                      shareBar: 'bg-linear-to-r from-amber-400 via-amber-300 to-amber-500',
+                      followers: 'text-lg text-amber-300 drop-shadow-[0_0_8px_rgba(245,158,11,0.35)]',
+                      ambientHalo: 'bg-linear-to-r from-amber-400/25 via-amber-300/15 to-amber-500/20',
+                      topBevel: 'bg-linear-to-r from-transparent via-amber-200/80 to-transparent',
+                    };
+                  case 2:
+                    return {
+                      card: 'bg-linear-to-r from-slate-200/10 via-white/[0.08] to-slate-300/10 backdrop-blur-xl border-2 border-slate-300/55 hover:border-slate-100 shadow-[0_4px_18px_-4px_rgba(226,232,240,0.18),inset_0_1px_1.5px_rgba(255,255,255,0.3)]',
+                      name: 'text-white group-hover:text-slate-100',
+                      handle: 'text-slate-300/80 group-hover:text-slate-100',
+                      shareBar: 'bg-linear-to-r from-slate-200 via-slate-300 to-slate-400',
+                      followers: 'text-base text-slate-100',
+                      ambientHalo: 'bg-slate-200/12',
+                      topBevel: 'bg-linear-to-r from-transparent via-slate-200/60 to-transparent',
+                    };
+                  case 3:
+                    return {
+                      card: 'bg-linear-to-r from-sky-400/10 via-white/[0.07] to-cyan-500/10 backdrop-blur-xl border-2 border-sky-400/50 hover:border-sky-300 shadow-[0_4px_16px_-4px_rgba(56,189,248,0.18),inset_0_1px_1.5px_rgba(255,255,255,0.25)]',
+                      name: 'text-white group-hover:text-sky-200',
+                      handle: 'text-sky-200/80 group-hover:text-sky-100',
+                      shareBar: 'bg-linear-to-r from-sky-400 via-sky-300 to-cyan-400',
+                      followers: 'text-base text-sky-200',
+                      ambientHalo: 'bg-sky-400/12',
+                      topBevel: 'bg-linear-to-r from-transparent via-sky-300/60 to-transparent',
+                    };
+                  default:
+                    return {
+                      card: 'bg-white/[0.05] hover:bg-white/[0.10] backdrop-blur-md border border-white/14 hover:border-white/28 shadow-2xs',
+                      name: 'text-white group-hover:text-violet-200',
+                      handle: 'text-violet-300/80 group-hover:text-violet-100',
+                      shareBar: 'bg-linear-to-r from-violet-400/80 to-indigo-400/80',
+                      followers: 'text-base text-violet-200',
+                      ambientHalo: null,
+                      topBevel: null,
+                    };
+                }
+              })();
 
               return (
                 <motion.a
@@ -413,18 +483,46 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                     duration: 0.45,
                     ease: EASE_OUT_EXPO,
                   }}
-                  whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.13)', transition: { duration: 0.18, ease: 'easeOut' } }}
+                  whileHover={{
+                    x: 4,
+                    scale: 1.01,
+                    transition: { duration: 0.18, ease: 'easeOut' },
+                  }}
                   whileTap={{ scale: 0.98 }}
-                  className="p-2.5 rounded-2xl bg-white/[0.07] hover:bg-white/[0.13] backdrop-blur-md border border-white/12 hover:border-amber-400/40 flex items-center justify-between gap-3 group transition-[border-color,box-shadow] duration-200 will-change-transform cursor-pointer shadow-2xs relative"
+                  className={`group relative p-2.5 rounded-2xl flex items-center justify-between gap-3 will-change-transform cursor-pointer transition-[border-color,box-shadow,background-color] duration-300 overflow-hidden ${tierStyles.card}`}
                   title={`เปิดไปยังช่อง ${plat.name}: ${plat.url}`}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {/* Subtle Ambient Backlight Glow for Tier 1, 2, 3 */}
+                  {tierStyles.ambientHalo && (
+                    <motion.div
+                      animate={
+                        rank === 1
+                          ? { opacity: [0.35, 0.65, 0.35] }
+                          : { opacity: [0.2, 0.4, 0.2] }
+                      }
+                      transition={{
+                        duration: 3.6,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                      className={`absolute -inset-1 rounded-2xl ${tierStyles.ambientHalo} blur-md pointer-events-none -z-10`}
+                    />
+                  )}
+
+                  {/* Specular Top Edge Bevel Highlight */}
+                  {tierStyles.topBevel && (
+                    <div
+                      className={`absolute inset-x-0 top-0 h-[1.5px] ${tierStyles.topBevel} pointer-events-none z-20`}
+                    />
+                  )}
+
+                  <div className="relative z-10 flex items-center gap-2.5 min-w-0 flex-1">
                     <div className="relative shrink-0">
                       {/* Gentle Ambient Pulse and Float on Platform Brand Icon */}
                       <motion.div
                         animate={{
                           y: [0, -2, 0],
-                          scale: [1, 1.04, 1],
+                          scale: rank === 1 ? [1, 1.06, 1] : [1, 1.03, 1],
                         }}
                         transition={{
                           duration: 3.2 + pIdx * 0.5,
@@ -438,16 +536,18 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                         <ArrowUpRight className="w-2.5 h-2.5 text-amber-300" />
                       </span>
                     </div>
+
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors">
+                        <span className={`text-xs font-bold transition-colors ${tierStyles.name}`}>
                           {plat.name}
                         </span>
-                        <span className="text-[11px] text-violet-300 group-hover:text-violet-100 transition-colors truncate">
+                        <span className={`text-[11px] transition-colors truncate ${tierStyles.handle}`}>
                           {plat.handle}
                         </span>
                       </div>
-                      {/* Animated Share Bar with Idle Micro-Shimmer */}
+
+                      {/* Animated Share Bar */}
                       <div className="w-full max-w-[140px] xl:max-w-[220px] 2xl:max-w-[280px] h-1.5 bg-white/10 rounded-full mt-1.5 overflow-hidden relative">
                         <motion.div
                           initial={{ width: 0 }}
@@ -458,30 +558,20 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                             delay: 0.2 + pIdx * 0.08,
                             ease: EASE_OUT_EXPO,
                           }}
-                          className="h-full rounded-full bg-linear-to-r from-amber-300 via-pink-400 to-violet-400 relative overflow-hidden"
-                        >
-                          {/* Subtle Ambient Idle Shimmer Bar */}
-                          <motion.div
-                            animate={{ x: ['-100%', '200%'] }}
-                            transition={{
-                              duration: 2.8,
-                              repeat: Infinity,
-                              ease: 'easeInOut',
-                              delay: pIdx * 0.4,
-                            }}
-                            className="absolute inset-y-0 w-1/2 bg-linear-to-r from-transparent via-white/40 to-transparent"
-                          />
-                        </motion.div>
+                          className={`h-full rounded-full relative overflow-hidden ${tierStyles.shareBar}`}
+                        />
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 shrink-0">
+                  <div className="relative z-10 flex items-center gap-2.5 shrink-0">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-[11px] text-violet-200 font-mono-num">
                       <Flame className="w-3 h-3 text-amber-400" />
                       <AnimatedCounter value={plat.er} duration={1.5} />
                     </span>
-                    <span className="text-base font-bold text-amber-300 font-mono-num w-16 text-right group-hover:scale-105 transition-transform">
+                    <span
+                      className={`font-bold font-mono-num w-16 text-right group-hover:scale-105 transition-transform ${tierStyles.followers}`}
+                    >
                       <AnimatedCounter value={plat.followers} duration={1.7} />
                     </span>
                   </div>
