@@ -1,16 +1,38 @@
-import { buildCookie, getEffectiveCredentials } from './_utils';
+function parseCookies(cookieHeader) {
+  const list = {};
+  if (!cookieHeader || typeof cookieHeader !== 'string') return list;
+  cookieHeader.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    const key = parts.shift()?.trim();
+    if (key) {
+      const value = parts.join('=').trim();
+      try {
+        list[key] = decodeURIComponent(value);
+      } catch {
+        list[key] = value;
+      }
+    }
+  });
+  return list;
+}
 
-async function tryRefreshTikTokToken(
-  clientKey: string,
-  clientSecret: string,
-  refreshToken: string
-): Promise<{
-  accessToken?: string;
-  refreshToken?: string;
-  expiresIn?: number;
-  expiresAt?: number;
-  error?: string;
-}> {
+function parseBody(req) {
+  if (!req || !req.body) return {};
+  if (typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return req.body;
+  try {
+    const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf-8') : String(req.body);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function buildCookie(name, value, maxAgeSeconds = 2592000) {
+  const encoded = encodeURIComponent(String(value ?? ''));
+  return `${name}=${encoded}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+}
+
+async function tryRefreshTikTokToken(clientKey, clientSecret, refreshToken) {
   if (!clientKey || !clientSecret || !refreshToken) {
     return { error: 'Missing refresh token or client credentials' };
   }
@@ -37,34 +59,51 @@ async function tryRefreshTikTokToken(
       };
     }
     return { error: data.error?.message || data.error_description || 'Refresh token failed' };
-  } catch (e: any) {
+  } catch (e) {
     return { error: e?.message || 'Network error refreshing token' };
   }
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   try {
-    const creds = getEffectiveCredentials(req);
-    let token = creds.accessToken;
-    let refreshedTokenPayload: {
-      accessToken: string;
-      refreshToken: string;
-      expiresAt: number;
-    } | null = null;
+    const cookies = parseCookies(req?.headers?.cookie);
+    const query = req?.query || {};
+    const body = parseBody(req);
 
-    if (!token && creds.refreshToken && creds.clientKey && creds.clientSecret) {
-      const refreshed = await tryRefreshTikTokToken(
-        creds.clientKey,
-        creds.clientSecret,
-        creds.refreshToken
-      );
+    let headerToken = '';
+    const authHeader = req?.headers?.authorization || req?.headers?.Authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      headerToken = authHeader.substring(7).trim();
+    }
+
+    const clientKey = String(
+      body.clientKey || query.clientKey || cookies.tiktok_ck || process.env.TIKTOK_CLIENT_KEY || ''
+    ).trim();
+    const clientSecret = String(
+      body.clientSecret ||
+        query.clientSecret ||
+        cookies.tiktok_cs ||
+        process.env.TIKTOK_CLIENT_SECRET ||
+        ''
+    ).trim();
+    let token = String(
+      headerToken || body.accessToken || query.accessToken || cookies.tiktok_at || ''
+    ).trim();
+    const refreshToken = String(
+      body.refreshToken || query.refreshToken || cookies.tiktok_rt || ''
+    ).trim();
+
+    let refreshedTokenPayload = null;
+
+    if (!token && refreshToken && clientKey && clientSecret) {
+      const refreshed = await tryRefreshTikTokToken(clientKey, clientSecret, refreshToken);
       if (refreshed.accessToken) {
         token = refreshed.accessToken;
         refreshedTokenPayload = {
           accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken || creds.refreshToken,
+          refreshToken: refreshed.refreshToken || refreshToken,
           expiresAt: refreshed.expiresAt || Date.now() + 86400000,
         };
       }
@@ -88,24 +127,19 @@ export default async function handler(req: any, res: any) {
       }
     );
 
-    // If 401 and we have a refresh token, attempt automatic token refresh once
     if (
       response.status === 401 &&
-      creds.refreshToken &&
-      creds.clientKey &&
-      creds.clientSecret &&
+      refreshToken &&
+      clientKey &&
+      clientSecret &&
       !refreshedTokenPayload
     ) {
-      const refreshed = await tryRefreshTikTokToken(
-        creds.clientKey,
-        creds.clientSecret,
-        creds.refreshToken
-      );
+      const refreshed = await tryRefreshTikTokToken(clientKey, clientSecret, refreshToken);
       if (refreshed.accessToken) {
         token = refreshed.accessToken;
         refreshedTokenPayload = {
           accessToken: refreshed.accessToken,
-          refreshToken: refreshed.refreshToken || creds.refreshToken,
+          refreshToken: refreshed.refreshToken || refreshToken,
           expiresAt: refreshed.expiresAt || Date.now() + 86400000,
         };
         response = await fetch(
@@ -168,7 +202,7 @@ export default async function handler(req: any, res: any) {
       refreshedToken: refreshedTokenPayload || undefined,
       source: 'official_api',
     });
-  } catch (err: any) {
+  } catch (err) {
     return res
       .status(500)
       .json({ error: err?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ TikTok Open API' });

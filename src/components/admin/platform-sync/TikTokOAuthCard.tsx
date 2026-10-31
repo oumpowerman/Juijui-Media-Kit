@@ -57,9 +57,13 @@ export const TikTokOAuthCard: React.FC<TikTokOAuthCardProps> = ({
   const [tiktokClientKeyInput, setTiktokClientKeyInput] = useState(
     tiktokOAuth?.clientKey || tiktokCreds.clientKey || ''
   );
-  const [tiktokClientSecretInput, setTiktokClientSecretInput] = useState('');
+  const [tiktokClientSecretInput, setTiktokClientSecretInput] = useState(
+    tiktokOAuth?.clientSecret || tiktokCreds.clientSecret || ''
+  );
   const [showTikTokSecret, setShowTikTokSecret] = useState(false);
-  const [showTikTokSettings, setShowTikTokSettings] = useState(false);
+  const [showTikTokSettings, setShowTikTokSettings] = useState(
+    () => !tiktokOAuth?.isConnected && !(tiktokOAuth?.clientKey || tiktokCreds.clientKey)
+  );
   const [showTikTokManualFallback, setShowTikTokManualFallback] = useState(false);
   const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
   const [isSavingTikTokConfig, setIsSavingTikTokConfig] = useState(false);
@@ -71,6 +75,13 @@ export const TikTokOAuthCard: React.FC<TikTokOAuthCardProps> = ({
       setTiktokClientKeyInput(incomingKey);
     }
   }, [tiktokOAuth?.clientKey, tiktokCreds.clientKey, tiktokClientKeyInput]);
+
+  useEffect(() => {
+    const incomingSecret = tiktokOAuth?.clientSecret || tiktokCreds.clientSecret || '';
+    if (incomingSecret && !tiktokClientSecretInput) {
+      setTiktokClientSecretInput(incomingSecret);
+    }
+  }, [tiktokOAuth?.clientSecret, tiktokCreds.clientSecret, tiktokClientSecretInput]);
 
   const handleSaveTikTokConfig = async () => {
     if (!onSaveTikTokConfig) return;

@@ -1,6 +1,46 @@
-import { parseCookies, buildCookie, getRedirectUri, getEffectiveCredentials } from './_utils';
+function parseCookies(cookieHeader) {
+  const list = {};
+  if (!cookieHeader || typeof cookieHeader !== 'string') return list;
+  cookieHeader.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    const key = parts.shift()?.trim();
+    if (key) {
+      const value = parts.join('=').trim();
+      try {
+        list[key] = decodeURIComponent(value);
+      } catch {
+        list[key] = value;
+      }
+    }
+  });
+  return list;
+}
 
-export default async function handler(req: any, res: any) {
+function buildCookie(name, value, maxAgeSeconds = 2592000) {
+  const encoded = encodeURIComponent(String(value ?? ''));
+  return `${name}=${encoded}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+}
+
+function getRedirectUri(req) {
+  if (req?.query?.redirectUri && typeof req.query.redirectUri === 'string') {
+    return req.query.redirectUri;
+  }
+  if (process.env.APP_URL) {
+    const baseUrl = process.env.APP_URL.replace(/\/$/, '');
+    return `${baseUrl}/api/tiktok/callback`;
+  }
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host || 'localhost:3000';
+  const protoHeader = req?.headers?.['x-forwarded-proto'];
+  const protocol =
+    protoHeader === 'https' ||
+    String(host).includes('.vercel.app') ||
+    !String(host).includes('localhost')
+      ? 'https'
+      : 'http';
+  return `${protocol}://${host}/api/tiktok/callback`;
+}
+
+export default async function handler(req, res) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
   const { code, state, error, error_description } = req.query || {};
@@ -30,9 +70,8 @@ export default async function handler(req: any, res: any) {
     return res.status(400).send('Missing authorization code from TikTok');
   }
 
-  // Decode state fallback if cookies were stripped or cross-site
-  let stateCreds: { ck?: string; cs?: string; ru?: string } = {};
-  if (typeof state === 'string' && state.length > 10) {
+  let stateCreds = {};
+  if (typeof state === 'string' && state.length > 6) {
     try {
       const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
       if (decoded && typeof decoded === 'object') {
@@ -44,15 +83,27 @@ export default async function handler(req: any, res: any) {
   }
 
   const cookies = parseCookies(req?.headers?.cookie);
-  const envCreds = getEffectiveCredentials(req);
+  const query = req?.query || {};
 
-  const clientKey = envCreds.clientKey || stateCreds.ck || '';
-  const clientSecret = envCreds.clientSecret || stateCreds.cs || '';
+  const clientKey = String(
+    query.clientKey ||
+      cookies.tiktok_ck ||
+      stateCreds.ck ||
+      process.env.TIKTOK_CLIENT_KEY ||
+      ''
+  ).trim();
+  const clientSecret = String(
+    query.clientSecret ||
+      cookies.tiktok_cs ||
+      stateCreds.cs ||
+      process.env.TIKTOK_CLIENT_SECRET ||
+      ''
+  ).trim();
   const redirectUri = cookies.tiktok_ru || stateCreds.ru || getRedirectUri(req);
 
   if (!clientKey || !clientSecret) {
     const missingMsg =
-      'ไม่พบ TikTok Client Key หรือ Client Secret สำหรับแลกเปลี่ยน Access Token กรุณาบันทึก Client Key และ Client Secret ในหน้าตั้งค่าก่อนกดเชื่อมต่อ';
+      'ไม่พบ TikTok Client Key หรือ Client Secret สำหรับแลกเปลี่ยน Access Token กรุณาเปิดเมนู "ตั้งค่า TikTok Client Credentials & Redirect URI" เพื่อกรอกและบันทึกทั้ง Client Key และ Client Secret ก่อนกดเชื่อมต่อ';
     return res.status(200).send(`<!DOCTYPE html>
 <html>
   <head><meta charset="utf-8" /><title>TikTok Authentication Failed</title></head>
@@ -118,7 +169,6 @@ export default async function handler(req: any, res: any) {
     const expiresIn = tokenObj.expires_in || 86400;
     const expiresAt = Date.now() + expiresIn * 1000;
 
-    // Fetch user profile & stats immediately
     let displayName = '';
     let avatarUrl = '';
     let followerCount = 0;
@@ -152,7 +202,6 @@ export default async function handler(req: any, res: any) {
 
     const lastSyncedAt = new Date().toISOString();
 
-    // Set cookies for subsequent stateless requests
     res.setHeader('Set-Cookie', [
       buildCookie('tiktok_ck', clientKey),
       buildCookie('tiktok_cs', clientSecret),
@@ -216,7 +265,7 @@ export default async function handler(req: any, res: any) {
     </script>
   </body>
 </html>`);
-  } catch (err: any) {
+  } catch (err) {
     return res
       .status(500)
       .send(`Authentication error: ${err?.message || 'Unknown error communicating with TikTok'}`);

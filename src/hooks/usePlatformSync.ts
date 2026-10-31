@@ -449,17 +449,21 @@ export function usePlatformSync() {
         // Persist to Cloud Firestore immediately
         await syncPlatformConfigToFirestore(nextCreds, nextOAuth);
 
-        // Also sync to backend/serverless cookies
-        const resp = await fetch('/api/tiktok/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientKey: trimmedKey,
-            clientSecret: trimmedSecret || nextOAuth.clientSecret,
-          }),
-        });
-        if (resp.ok) {
-          await safeParseJsonResponse(resp, '/api/tiktok/config');
+        // Also sync to backend/serverless cookies (non-blocking if serverless cookie endpoint fails)
+        try {
+          const resp = await fetch('/api/tiktok/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clientKey: trimmedKey,
+              clientSecret: trimmedSecret || nextOAuth.clientSecret,
+            }),
+          });
+          if (resp.ok) {
+            await safeParseJsonResponse(resp, '/api/tiktok/config').catch(() => {});
+          }
+        } catch {
+          // Non-blocking: Firestore & localStorage already persisted
         }
         return true;
       } catch (err: unknown) {
@@ -471,34 +475,86 @@ export function usePlatformSync() {
     [syncPlatformConfigToFirestore]
   );
 
-  // Launch TikTok OAuth popup
+  // Helper to build TikTok v2 OAuth URL directly on the client with base64url state payload
+  const buildClientTikTokAuthUrl = useCallback(
+    (clientKey: string, clientSecret: string, redirectUri: string): string => {
+      const nonce = Math.random().toString(36).substring(2, 12);
+      const stateJson = JSON.stringify({
+        n: nonce,
+        ck: clientKey,
+        cs: clientSecret || '',
+        ru: redirectUri,
+      });
+      const bytes = new TextEncoder().encode(stateJson);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const statePayload = btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      const params = new URLSearchParams({
+        client_key: clientKey,
+        scope: 'user.info.basic,user.info.stats',
+        response_type: 'code',
+        redirect_uri: redirectUri,
+        state: statePayload,
+      });
+      return `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
+    },
+    []
+  );
+
+  // Launch TikTok OAuth popup (Direct Browser OAuth + Serverless Cookie Sync)
   const connectTikTok = useCallback(
     async (overrideClientKey?: string, overrideClientSecret?: string) => {
       setTiktokOAuth((prev) => ({ ...prev, isConnecting: true, error: null }));
       try {
-        const effectiveClientKey = (
+        const envClientKey =
+          (typeof import.meta !== 'undefined' &&
+            (import.meta as any).env?.VITE_TIKTOK_CLIENT_KEY) ||
+          '';
+        const envClientSecret =
+          (typeof import.meta !== 'undefined' &&
+            (import.meta as any).env?.VITE_TIKTOK_CLIENT_SECRET) ||
+          '';
+
+        const effectiveClientKey = String(
           overrideClientKey ||
-          tiktokOAuthRef.current.clientKey ||
-          credentialsRef.current.tiktok.clientKey ||
-          ''
+            tiktokOAuthRef.current.clientKey ||
+            credentialsRef.current.tiktok.clientKey ||
+            envClientKey ||
+            ''
         ).trim();
-        const effectiveClientSecret = (
+        const effectiveClientSecret = String(
           overrideClientSecret ||
-          tiktokOAuthRef.current.clientSecret ||
-          credentialsRef.current.tiktok.clientSecret ||
-          ''
+            tiktokOAuthRef.current.clientSecret ||
+            credentialsRef.current.tiktok.clientSecret ||
+            envClientSecret ||
+            ''
         ).trim();
 
-        if (overrideClientKey || overrideClientSecret) {
-          // Trigger save without blocking popup gesture
+        if (effectiveClientKey) {
+          // Persist credentials in background without delaying popup open
           saveTikTokConfig(effectiveClientKey, effectiveClientSecret).catch(() => {});
         }
 
         const redirectUri = `${window.location.origin}/api/tiktok/callback`;
         let targetAuthUrl = '';
 
-        try {
-          const resp = await fetch('/api/tiktok/auth-url', {
+        // Approach 3: If Client Key is available locally, construct OAuth URL immediately on client
+        // so popup opens right away without failing on serverless cold starts
+        if (effectiveClientKey) {
+          targetAuthUrl = buildClientTikTokAuthUrl(
+            effectiveClientKey,
+            effectiveClientSecret,
+            redirectUri
+          );
+
+          // Sync cookies in background via /api/tiktok/auth-url (non-blocking)
+          fetch('/api/tiktok/auth-url', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -506,58 +562,43 @@ export function usePlatformSync() {
               clientSecret: effectiveClientSecret,
               redirectUri,
             }),
-          });
+          }).catch(() => {});
+        } else {
+          // No client key in browser state: query /api/tiktok/auth-url in case TIKTOK_CLIENT_KEY is set on Vercel server env
+          try {
+            const resp = await fetch('/api/tiktok/auth-url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                clientKey: '',
+                clientSecret: effectiveClientSecret,
+                redirectUri,
+              }),
+            });
 
-          const data = await safeParseJsonResponse<{
-            authUrl?: string;
-            error?: string;
-            redirectUri?: string;
-          }>(resp, '/api/tiktok/auth-url');
+            const data = await safeParseJsonResponse<{
+              authUrl?: string;
+              error?: string;
+              redirectUri?: string;
+            }>(resp, '/api/tiktok/auth-url');
 
-          if (resp.ok && data.authUrl) {
-            targetAuthUrl = data.authUrl;
-          } else if (!effectiveClientKey && data.error) {
-            throw new Error(data.error);
-          }
-        } catch (serverErr) {
-          // If server endpoint failed and no clientKey is available locally, rethrow
-          if (!effectiveClientKey) {
-            throw serverErr;
-          }
-        }
-
-        // Fallback: construct TikTok v2 OAuth URL directly on client if needed
-        if (!targetAuthUrl) {
-          if (!effectiveClientKey) {
+            if (resp.ok && data.authUrl) {
+              targetAuthUrl = data.authUrl;
+            } else {
+              throw new Error(
+                data.error ||
+                  'กรุณาระบุ TikTok Client Key และ Client Secret ในส่วน "ตั้งค่า TikTok Client Credentials & Redirect URI" ด้านล่างก่อนกดเชื่อมต่อ'
+              );
+            }
+          } catch (serverErr) {
+            const rawMsg = serverErr instanceof Error ? serverErr.message : '';
+            if (rawMsg.includes('TikTok Client Key')) {
+              throw serverErr;
+            }
             throw new Error(
-              'กรุณาระบุ TikTok Client Key ในส่วน "ตั้งค่า TikTok Client Credentials" ก่อนทำการเชื่อมต่อ OAuth'
+              'กรุณาระบุ TikTok Client Key และ Client Secret ในช่อง "ตั้งค่า TikTok Client Credentials & Redirect URI" ด้านล่างก่อนทำการเชื่อมต่อ OAuth'
             );
           }
-          const nonce = Math.random().toString(36).substring(2, 12);
-          const stateJson = JSON.stringify({
-            n: nonce,
-            ck: effectiveClientKey,
-            cs: effectiveClientSecret || '',
-            ru: redirectUri,
-          });
-          const bytes = new TextEncoder().encode(stateJson);
-          let binary = '';
-          for (let i = 0; i < bytes.length; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const statePayload = btoa(binary)
-            .replace(/\+/g, '-')
-            .replace(/\//g, '_')
-            .replace(/=+$/, '');
-
-          const params = new URLSearchParams({
-            client_key: effectiveClientKey,
-            scope: 'user.info.basic,user.info.stats',
-            response_type: 'code',
-            redirect_uri: redirectUri,
-            state: statePayload,
-          });
-          targetAuthUrl = `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
         }
 
         // Open popup directly to TikTok authorization URL
@@ -579,7 +620,7 @@ export function usePlatformSync() {
         setTiktokOAuth((prev) => ({ ...prev, isConnecting: false, error: msg }));
       }
     },
-    [saveTikTokConfig]
+    [saveTikTokConfig, buildClientTikTokAuthUrl]
   );
 
   // Disconnect TikTok

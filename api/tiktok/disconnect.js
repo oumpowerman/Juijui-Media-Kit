@@ -1,6 +1,9 @@
-import { buildCookie } from './_utils';
+function buildCookie(name, value, maxAgeSeconds = 2592000) {
+  const encoded = encodeURIComponent(String(value ?? ''));
+  return `${name}=${encoded}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSeconds}`;
+}
 
-export default async function handler(_req: any, res: any) {
+export default async function handler(_req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Set-Cookie', [
     buildCookie('tiktok_at', '', 0),

@@ -9,8 +9,11 @@ import {
 
 export interface TikTokOAuthState {
   clientKey: string;
+  clientSecret?: string;
   hasClientSecret: boolean;
   isConnected: boolean;
+  accessToken?: string;
+  refreshToken?: string;
   expiresAt: number | null;
   openId: string | null;
   displayName: string | null;
