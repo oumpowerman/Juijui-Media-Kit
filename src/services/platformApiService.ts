@@ -212,7 +212,10 @@ export async function safeParseJsonResponse<T = any>(
   try {
     return rawText ? (JSON.parse(rawText) as T) : ({} as T);
   } catch {
-    throw new Error(`ข้อมูลที่ได้รับจาก ${endpointLabel} ไม่ใช่รูปแบบ JSON ที่ถูกต้อง`);
+    const preview = rawText.replace(/\s+/g, ' ').trim().slice(0, 120);
+    throw new Error(
+      `ข้อมูลที่ได้รับจาก ${endpointLabel} (HTTP ${resp.status}) ไม่ใช่รูปแบบ JSON ที่ถูกต้อง${preview ? `: "${preview}"` : ''}`
+    );
   }
 }
 

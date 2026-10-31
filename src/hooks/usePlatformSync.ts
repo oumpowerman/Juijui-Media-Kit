@@ -490,30 +490,74 @@ export function usePlatformSync() {
         ).trim();
 
         if (overrideClientKey || overrideClientSecret) {
-          await saveTikTokConfig(effectiveClientKey, effectiveClientSecret);
+          // Trigger save without blocking popup gesture
+          saveTikTokConfig(effectiveClientKey, effectiveClientSecret).catch(() => {});
         }
 
         const redirectUri = `${window.location.origin}/api/tiktok/callback`;
-        const resp = await fetch('/api/tiktok/auth-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientKey: effectiveClientKey,
-            clientSecret: effectiveClientSecret,
-            redirectUri,
-          }),
-        });
+        let targetAuthUrl = '';
 
-        const data = await safeParseJsonResponse<{
-          authUrl?: string;
-          error?: string;
-          redirectUri?: string;
-        }>(resp, '/api/tiktok/auth-url');
+        try {
+          const resp = await fetch('/api/tiktok/auth-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clientKey: effectiveClientKey,
+              clientSecret: effectiveClientSecret,
+              redirectUri,
+            }),
+          });
 
-        if (!resp.ok || !data.authUrl) {
-          throw new Error(
-            data.error || 'ไม่สามารถสร้าง URL สำหรับยืนยันสิทธิ์ TikTok ได้ กรุณาตรวจสอบ Client Key'
-          );
+          const data = await safeParseJsonResponse<{
+            authUrl?: string;
+            error?: string;
+            redirectUri?: string;
+          }>(resp, '/api/tiktok/auth-url');
+
+          if (resp.ok && data.authUrl) {
+            targetAuthUrl = data.authUrl;
+          } else if (!effectiveClientKey && data.error) {
+            throw new Error(data.error);
+          }
+        } catch (serverErr) {
+          // If server endpoint failed and no clientKey is available locally, rethrow
+          if (!effectiveClientKey) {
+            throw serverErr;
+          }
+        }
+
+        // Fallback: construct TikTok v2 OAuth URL directly on client if needed
+        if (!targetAuthUrl) {
+          if (!effectiveClientKey) {
+            throw new Error(
+              'กรุณาระบุ TikTok Client Key ในส่วน "ตั้งค่า TikTok Client Credentials" ก่อนทำการเชื่อมต่อ OAuth'
+            );
+          }
+          const nonce = Math.random().toString(36).substring(2, 12);
+          const stateJson = JSON.stringify({
+            n: nonce,
+            ck: effectiveClientKey,
+            cs: effectiveClientSecret || '',
+            ru: redirectUri,
+          });
+          const bytes = new TextEncoder().encode(stateJson);
+          let binary = '';
+          for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const statePayload = btoa(binary)
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+
+          const params = new URLSearchParams({
+            client_key: effectiveClientKey,
+            scope: 'user.info.basic,user.info.stats',
+            response_type: 'code',
+            redirect_uri: redirectUri,
+            state: statePayload,
+          });
+          targetAuthUrl = `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`;
         }
 
         // Open popup directly to TikTok authorization URL
@@ -522,7 +566,7 @@ export function usePlatformSync() {
         const left = window.screenX + (window.outerWidth - popupWidth) / 2;
         const top = window.screenY + (window.outerHeight - popupHeight) / 2;
         const popup = window.open(
-          data.authUrl,
+          targetAuthUrl,
           'tiktok_oauth_window',
           `width=${popupWidth},height=${popupHeight},left=${left},top=${top},status=no,menubar=no,toolbar=no`
         );
