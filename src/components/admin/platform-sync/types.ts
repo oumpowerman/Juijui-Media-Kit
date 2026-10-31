@@ -54,7 +54,7 @@ export interface PlatformSyncTabProps {
   ) => Promise<void>;
   saveDraftChanges: (customDraft?: CreatorProfile, customMessage?: string) => Promise<void>;
   tiktokOAuth?: TikTokOAuthState;
-  onConnectTikTok?: () => Promise<void>;
+  onConnectTikTok?: (overrideClientKey?: string, overrideClientSecret?: string) => Promise<void>;
   onDisconnectTikTok?: () => Promise<void>;
   onRefreshTikTokToken?: () => Promise<void>;
   onSaveTikTokConfig?: (clientKey: string, clientSecret?: string) => Promise<boolean>;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   RefreshCw,
   Check,
@@ -27,7 +27,7 @@ interface TikTokOAuthCardProps {
   showManualToken: boolean;
   onToggleShowManualToken: () => void;
   onChangeTiktokCreds: (next: PlatformApiCredentials['tiktok']) => void;
-  onConnectTikTok?: () => Promise<void>;
+  onConnectTikTok?: (overrideClientKey?: string, overrideClientSecret?: string) => Promise<void>;
   onDisconnectTikTok?: () => Promise<void>;
   onRefreshTikTokToken?: () => Promise<void>;
   onSaveTikTokConfig?: (clientKey: string, clientSecret?: string) => Promise<boolean>;
@@ -64,6 +64,13 @@ export const TikTokOAuthCard: React.FC<TikTokOAuthCardProps> = ({
   const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
   const [isSavingTikTokConfig, setIsSavingTikTokConfig] = useState(false);
   const [tiktokConfigSavedToast, setTiktokConfigSavedToast] = useState(false);
+
+  useEffect(() => {
+    const incomingKey = tiktokOAuth?.clientKey || tiktokCreds.clientKey || '';
+    if (incomingKey && !tiktokClientKeyInput) {
+      setTiktokClientKeyInput(incomingKey);
+    }
+  }, [tiktokOAuth?.clientKey, tiktokCreds.clientKey, tiktokClientKeyInput]);
 
   const handleSaveTikTokConfig = async () => {
     if (!onSaveTikTokConfig) return;
@@ -235,7 +242,12 @@ export const TikTokOAuthCard: React.FC<TikTokOAuthCardProps> = ({
           <button
             type="button"
             disabled={tiktokOAuth?.isConnecting || !onConnectTikTok}
-            onClick={() => onConnectTikTok?.()}
+            onClick={() =>
+              onConnectTikTok?.(
+                tiktokClientKeyInput || undefined,
+                tiktokClientSecretInput || undefined
+              )
+            }
             className="w-full py-3 px-4 rounded-xl bg-slate-950 hover:bg-slate-900 text-white font-bold text-xs shadow-md shadow-slate-950/20 flex items-center justify-center gap-2.5 transition-all cursor-pointer border border-slate-800 disabled:opacity-50"
           >
             <PlatformBrandIcon platform="tiktok" size="xs" />

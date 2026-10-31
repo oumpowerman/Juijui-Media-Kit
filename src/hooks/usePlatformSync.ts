@@ -4,7 +4,9 @@
  * diff review, selective application, and 5-version snapshot rollback ring buffer.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import { CreatorProfile, PlatformStat } from '../data/types';
 import {
   PlatformApiCredentials,
@@ -21,11 +23,31 @@ import {
   formatFollowerCount,
   SinglePlatformTestResult,
   testSinglePlatform,
+  safeParseJsonResponse,
 } from '../services/platformApiService';
 
 const CREDENTIALS_STORAGE_KEY = 'juijui_platform_api_credentials';
+const TIKTOK_OAUTH_STORAGE_KEY = 'juijui_tiktok_oauth_state';
 const HISTORY_STORAGE_KEY = 'juijui_platform_sync_history';
 const MAX_HISTORY_ITEMS = 5;
+
+export interface StoredTikTokOAuthData {
+  clientKey: string;
+  clientSecret?: string;
+  hasClientSecret: boolean;
+  isConnected: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt: number | null;
+  openId: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  followerCount: number | null;
+  likesCount: number | null;
+  videoCount: number | null;
+  lastSyncedAt: string | null;
+  redirectUri: string;
+}
 
 export function usePlatformSync() {
   // Credentials state with localStorage persistence
@@ -33,7 +55,13 @@ export function usePlatformSync() {
     try {
       const stored = localStorage.getItem(CREDENTIALS_STORAGE_KEY);
       if (stored) {
-        return { ...DEFAULT_API_CREDENTIALS, ...JSON.parse(stored) };
+        const parsed = JSON.parse(stored);
+        return {
+          youtube: { ...DEFAULT_API_CREDENTIALS.youtube, ...(parsed.youtube || {}) },
+          tiktok: { ...DEFAULT_API_CREDENTIALS.tiktok, ...(parsed.tiktok || {}) },
+          instagram: { ...DEFAULT_API_CREDENTIALS.instagram, ...(parsed.instagram || {}) },
+          facebook: { ...DEFAULT_API_CREDENTIALS.facebook, ...(parsed.facebook || {}) },
+        };
       }
     } catch {
       // Fallback to default
@@ -61,13 +89,18 @@ export function usePlatformSync() {
   const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string | null>(null);
   const [activeSyncMode, setActiveSyncMode] = useState<'official' | 'simulation'>('simulation');
   const [singleTestLoading, setSingleTestLoading] = useState<Record<string, boolean>>({});
-  const [singleTestResults, setSingleTestResults] = useState<Record<string, SinglePlatformTestResult | null>>({});
+  const [singleTestResults, setSingleTestResults] = useState<
+    Record<string, SinglePlatformTestResult | null>
+  >({});
 
-  // TikTok Official OAuth 2.0 State
+  // TikTok Official OAuth 2.0 State (restored from localStorage immediately if available)
   const [tiktokOAuth, setTiktokOAuth] = useState<{
     clientKey: string;
+    clientSecret?: string;
     hasClientSecret: boolean;
     isConnected: boolean;
+    accessToken?: string;
+    refreshToken?: string;
     expiresAt: number | null;
     openId: string | null;
     displayName: string | null;
@@ -81,50 +114,220 @@ export function usePlatformSync() {
     isRefreshing: boolean;
     error: string | null;
     successMessage: string | null;
-  }>({
-    clientKey: '',
-    hasClientSecret: false,
-    isConnected: false,
-    expiresAt: null,
-    openId: null,
-    displayName: null,
-    avatarUrl: null,
-    followerCount: null,
-    likesCount: null,
-    videoCount: null,
-    lastSyncedAt: null,
-    redirectUri: typeof window !== 'undefined' ? `${window.location.origin}/api/tiktok/callback` : '',
-    isConnecting: false,
-    isRefreshing: false,
-    error: null,
-    successMessage: null,
+  }>(() => {
+    const defaultRedirectUri =
+      typeof window !== 'undefined' ? `${window.location.origin}/api/tiktok/callback` : '';
+    try {
+      const stored = localStorage.getItem(TIKTOK_OAUTH_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return {
+          clientKey: parsed.clientKey || '',
+          clientSecret: parsed.clientSecret || '',
+          hasClientSecret: Boolean(parsed.hasClientSecret || parsed.clientSecret),
+          isConnected: Boolean(parsed.isConnected || parsed.accessToken),
+          accessToken: parsed.accessToken || '',
+          refreshToken: parsed.refreshToken || '',
+          expiresAt: parsed.expiresAt || null,
+          openId: parsed.openId || null,
+          displayName: parsed.displayName || null,
+          avatarUrl: parsed.avatarUrl || null,
+          followerCount: parsed.followerCount ?? null,
+          likesCount: parsed.likesCount ?? null,
+          videoCount: parsed.videoCount ?? null,
+          lastSyncedAt: parsed.lastSyncedAt || null,
+          redirectUri: defaultRedirectUri,
+          isConnecting: false,
+          isRefreshing: false,
+          error: null,
+          successMessage: null,
+        };
+      }
+    } catch {
+      // Ignore
+    }
+    return {
+      clientKey: '',
+      clientSecret: '',
+      hasClientSecret: false,
+      isConnected: false,
+      accessToken: '',
+      refreshToken: '',
+      expiresAt: null,
+      openId: null,
+      displayName: null,
+      avatarUrl: null,
+      followerCount: null,
+      likesCount: null,
+      videoCount: null,
+      lastSyncedAt: null,
+      redirectUri: defaultRedirectUri,
+      isConnecting: false,
+      isRefreshing: false,
+      error: null,
+      successMessage: null,
+    };
   });
 
-  // Fetch TikTok OAuth status from server
+  const credentialsRef = useRef(credentials);
+  credentialsRef.current = credentials;
+  const tiktokOAuthRef = useRef(tiktokOAuth);
+  tiktokOAuthRef.current = tiktokOAuth;
+
+  // Helper to persist both credentials and tiktokOAuth to Cloud Firestore (/settings/platformConfig)
+  const syncPlatformConfigToFirestore = useCallback(
+    async (
+      nextCreds: PlatformApiCredentials,
+      nextOAuth: Partial<StoredTikTokOAuthData>
+    ) => {
+      try {
+        const configDocRef = doc(db, 'settings', 'platformConfig');
+        const cleanOAuth: Record<string, any> = {
+          clientKey: nextOAuth.clientKey ?? tiktokOAuthRef.current.clientKey ?? '',
+          clientSecret: nextOAuth.clientSecret ?? tiktokOAuthRef.current.clientSecret ?? '',
+          hasClientSecret: Boolean(
+            nextOAuth.hasClientSecret ??
+              nextOAuth.clientSecret ??
+              tiktokOAuthRef.current.hasClientSecret
+          ),
+          isConnected: Boolean(
+            nextOAuth.isConnected ?? nextOAuth.accessToken ?? tiktokOAuthRef.current.isConnected
+          ),
+          accessToken: nextOAuth.accessToken ?? tiktokOAuthRef.current.accessToken ?? '',
+          refreshToken: nextOAuth.refreshToken ?? tiktokOAuthRef.current.refreshToken ?? '',
+          expiresAt: nextOAuth.expiresAt ?? tiktokOAuthRef.current.expiresAt ?? null,
+          openId: nextOAuth.openId ?? tiktokOAuthRef.current.openId ?? null,
+          displayName: nextOAuth.displayName ?? tiktokOAuthRef.current.displayName ?? null,
+          avatarUrl: nextOAuth.avatarUrl ?? tiktokOAuthRef.current.avatarUrl ?? null,
+          followerCount: nextOAuth.followerCount ?? tiktokOAuthRef.current.followerCount ?? null,
+          likesCount: nextOAuth.likesCount ?? tiktokOAuthRef.current.likesCount ?? null,
+          videoCount: nextOAuth.videoCount ?? tiktokOAuthRef.current.videoCount ?? null,
+          lastSyncedAt: nextOAuth.lastSyncedAt ?? tiktokOAuthRef.current.lastSyncedAt ?? null,
+        };
+        await setDoc(
+          configDocRef,
+          {
+            id: 'platformConfig',
+            credentials: JSON.parse(JSON.stringify(nextCreds)),
+            tiktokOAuth: cleanOAuth,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch {
+        // Non-blocking if offline
+      }
+    },
+    []
+  );
+
+  // Subscribe to Cloud Firestore (/settings/platformConfig) so Vercel deployments stay synced across refreshes & devices
+  useEffect(() => {
+    const configDocRef = doc(db, 'settings', 'platformConfig');
+    const unsubscribe = onSnapshot(
+      configDocRef,
+      (snapshot) => {
+        if (!snapshot.exists()) return;
+        const data = snapshot.data();
+        if (data?.credentials && typeof data.credentials === 'object') {
+          const mergedCreds: PlatformApiCredentials = {
+            youtube: {
+              ...DEFAULT_API_CREDENTIALS.youtube,
+              ...(data.credentials.youtube || {}),
+            },
+            tiktok: {
+              ...DEFAULT_API_CREDENTIALS.tiktok,
+              ...(data.credentials.tiktok || {}),
+            },
+            instagram: {
+              ...DEFAULT_API_CREDENTIALS.instagram,
+              ...(data.credentials.instagram || {}),
+            },
+            facebook: {
+              ...DEFAULT_API_CREDENTIALS.facebook,
+              ...(data.credentials.facebook || {}),
+            },
+          };
+          setCredentials(mergedCreds);
+          try {
+            localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(mergedCreds));
+          } catch {
+            // Ignore
+          }
+        }
+
+        if (data?.tiktokOAuth && typeof data.tiktokOAuth === 'object') {
+          const remoteOAuth = data.tiktokOAuth;
+          setTiktokOAuth((prev) => {
+            const updated = {
+              ...prev,
+              clientKey: remoteOAuth.clientKey || prev.clientKey,
+              clientSecret: remoteOAuth.clientSecret || prev.clientSecret,
+              hasClientSecret: Boolean(
+                remoteOAuth.hasClientSecret || remoteOAuth.clientSecret || prev.hasClientSecret
+              ),
+              isConnected: Boolean(remoteOAuth.isConnected || remoteOAuth.accessToken),
+              accessToken: remoteOAuth.accessToken ?? prev.accessToken,
+              refreshToken: remoteOAuth.refreshToken ?? prev.refreshToken,
+              expiresAt: remoteOAuth.expiresAt ?? prev.expiresAt,
+              openId: remoteOAuth.openId ?? prev.openId,
+              displayName: remoteOAuth.displayName ?? prev.displayName,
+              avatarUrl: remoteOAuth.avatarUrl ?? prev.avatarUrl,
+              followerCount: remoteOAuth.followerCount ?? prev.followerCount,
+              likesCount: remoteOAuth.likesCount ?? prev.likesCount,
+              videoCount: remoteOAuth.videoCount ?? prev.videoCount,
+              lastSyncedAt: remoteOAuth.lastSyncedAt ?? prev.lastSyncedAt,
+            };
+            try {
+              localStorage.setItem(TIKTOK_OAUTH_STORAGE_KEY, JSON.stringify(updated));
+            } catch {
+              // Ignore
+            }
+            return updated;
+          });
+        }
+      },
+      () => {
+        // Ignore snapshot error if offline
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch TikTok OAuth status from server (merges with existing Firestore/localStorage state)
   const loadTikTokOAuthStatus = useCallback(async () => {
     try {
       const resp = await fetch('/api/tiktok/config');
       if (resp.ok) {
-        const data = await resp.json();
-        setTiktokOAuth((prev) => ({
-          ...prev,
-          clientKey: data.clientKey || prev.clientKey,
-          hasClientSecret: Boolean(data.hasClientSecret),
-          isConnected: Boolean(data.isConnected),
-          expiresAt: data.expiresAt,
-          openId: data.openId,
-          displayName: data.displayName,
-          avatarUrl: data.avatarUrl,
-          followerCount: data.followerCount,
-          likesCount: data.likesCount,
-          videoCount: data.videoCount,
-          lastSyncedAt: data.lastSyncedAt,
-          redirectUri:
-            data.redirectUri ||
-            (typeof window !== 'undefined'
-              ? `${window.location.origin}/api/tiktok/callback`
-              : prev.redirectUri),
-        }));
+        const data = await safeParseJsonResponse<any>(resp, '/api/tiktok/config');
+        setTiktokOAuth((prev) => {
+          const next = {
+            ...prev,
+            clientKey: data.clientKey || prev.clientKey || credentialsRef.current.tiktok.clientKey,
+            hasClientSecret: Boolean(
+              data.hasClientSecret || prev.hasClientSecret || credentialsRef.current.tiktok.clientSecret
+            ),
+            isConnected: Boolean(data.isConnected || prev.isConnected || prev.accessToken),
+            expiresAt: data.expiresAt ?? prev.expiresAt,
+            openId: data.openId || prev.openId,
+            displayName: data.displayName || prev.displayName,
+            avatarUrl: data.avatarUrl || prev.avatarUrl,
+            followerCount: data.followerCount ?? prev.followerCount,
+            likesCount: data.likesCount ?? prev.likesCount,
+            videoCount: data.videoCount ?? prev.videoCount,
+            lastSyncedAt: data.lastSyncedAt || prev.lastSyncedAt,
+            redirectUri:
+              typeof window !== 'undefined'
+                ? `${window.location.origin}/api/tiktok/callback`
+                : data.redirectUri || prev.redirectUri,
+          };
+          try {
+            localStorage.setItem(TIKTOK_OAUTH_STORAGE_KEY, JSON.stringify(next));
+          } catch {
+            // Ignore
+          }
+          return next;
+        });
       }
     } catch {
       // Ignore background fetch failure
@@ -140,13 +343,53 @@ export function usePlatformSync() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'TIKTOK_OAUTH_SUCCESS') {
-        loadTikTokOAuthStatus();
-        setTiktokOAuth((prev) => ({
-          ...prev,
+        const payload = event.data.data || {};
+        const nextOAuthState = {
+          ...tiktokOAuthRef.current,
+          clientKey: payload.clientKey || tiktokOAuthRef.current.clientKey,
+          hasClientSecret: true,
+          isConnected: true,
+          accessToken: payload.accessToken || tiktokOAuthRef.current.accessToken,
+          refreshToken: payload.refreshToken || tiktokOAuthRef.current.refreshToken,
+          expiresAt: payload.expiresAt || tiktokOAuthRef.current.expiresAt,
+          openId: payload.openId || tiktokOAuthRef.current.openId,
+          displayName: payload.displayName || tiktokOAuthRef.current.displayName,
+          avatarUrl: payload.avatarUrl || tiktokOAuthRef.current.avatarUrl,
+          followerCount: payload.followerCount ?? tiktokOAuthRef.current.followerCount,
+          likesCount: payload.likesCount ?? tiktokOAuthRef.current.likesCount,
+          videoCount: payload.videoCount ?? tiktokOAuthRef.current.videoCount,
+          lastSyncedAt: payload.lastSyncedAt || new Date().toISOString(),
           isConnecting: false,
           error: null,
-          successMessage: 'เชื่อมต่อบัญชี TikTok สำเร็จแล้ว!',
-        }));
+          successMessage: 'เชื่อมต่อบัญชี TikTok สำเร็จและบันทึกสิทธิ์ลง Cloud เรียบร้อยแล้ว!',
+        };
+
+        setTiktokOAuth(nextOAuthState);
+        try {
+          localStorage.setItem(TIKTOK_OAUTH_STORAGE_KEY, JSON.stringify(nextOAuthState));
+        } catch {
+          // Ignore
+        }
+
+        const updatedCreds: PlatformApiCredentials = {
+          ...credentialsRef.current,
+          tiktok: {
+            ...credentialsRef.current.tiktok,
+            clientKey: nextOAuthState.clientKey || credentialsRef.current.tiktok.clientKey,
+            accessToken: payload.accessToken || credentialsRef.current.tiktok.accessToken,
+            refreshToken: payload.refreshToken || credentialsRef.current.tiktok.refreshToken,
+          },
+        };
+        setCredentials(updatedCreds);
+        try {
+          localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(updatedCreds));
+        } catch {
+          // Ignore
+        }
+
+        // Persist to Firestore so it survives page refreshes and works across devices on Vercel
+        syncPlatformConfigToFirestore(updatedCreds, nextOAuthState);
+
         setTimeout(() => {
           setTiktokOAuth((prev) => ({ ...prev, successMessage: null }));
         }, 5000);
@@ -161,19 +404,63 @@ export function usePlatformSync() {
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [loadTikTokOAuthStatus]);
+  }, [syncPlatformConfigToFirestore]);
 
   // Save TikTok clientKey and clientSecret
   const saveTikTokConfig = useCallback(
     async (clientKey: string, clientSecret?: string) => {
+      const trimmedKey = clientKey.trim();
+      const trimmedSecret = clientSecret ? clientSecret.trim() : undefined;
+
       try {
+        const nextCreds: PlatformApiCredentials = {
+          ...credentialsRef.current,
+          tiktok: {
+            ...credentialsRef.current.tiktok,
+            clientKey: trimmedKey,
+            clientSecret: trimmedSecret || credentialsRef.current.tiktok.clientSecret || '',
+          },
+        };
+        setCredentials(nextCreds);
+        try {
+          localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCreds));
+        } catch {
+          // Ignore
+        }
+
+        const nextOAuth = {
+          ...tiktokOAuthRef.current,
+          clientKey: trimmedKey,
+          clientSecret: trimmedSecret || tiktokOAuthRef.current.clientSecret || '',
+          hasClientSecret: Boolean(
+            trimmedSecret ||
+              tiktokOAuthRef.current.clientSecret ||
+              tiktokOAuthRef.current.hasClientSecret
+          ),
+          error: null,
+        };
+        setTiktokOAuth(nextOAuth);
+        try {
+          localStorage.setItem(TIKTOK_OAUTH_STORAGE_KEY, JSON.stringify(nextOAuth));
+        } catch {
+          // Ignore
+        }
+
+        // Persist to Cloud Firestore immediately
+        await syncPlatformConfigToFirestore(nextCreds, nextOAuth);
+
+        // Also sync to backend/serverless cookies
         const resp = await fetch('/api/tiktok/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clientKey, clientSecret }),
+          body: JSON.stringify({
+            clientKey: trimmedKey,
+            clientSecret: trimmedSecret || nextOAuth.clientSecret,
+          }),
         });
-        if (!resp.ok) throw new Error('บันทึกการตั้งค่าไม่สำเร็จ');
-        await loadTikTokOAuthStatus();
+        if (resp.ok) {
+          await safeParseJsonResponse(resp, '/api/tiktok/config');
+        }
         return true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'บันทึกการตั้งค่าไม่สำเร็จ';
@@ -181,78 +468,176 @@ export function usePlatformSync() {
         return false;
       }
     },
-    [loadTikTokOAuthStatus]
+    [syncPlatformConfigToFirestore]
   );
 
   // Launch TikTok OAuth popup
-  const connectTikTok = useCallback(async () => {
-    setTiktokOAuth((prev) => ({ ...prev, isConnecting: true, error: null }));
-    try {
-      const redirectUri = `${window.location.origin}/api/tiktok/callback`;
-      const resp = await fetch(
-        `/api/tiktok/auth-url?redirectUri=${encodeURIComponent(redirectUri)}`
-      );
-      const data = await resp.json();
-      if (!resp.ok || !data.authUrl) {
-        throw new Error(data.error || 'ไม่สามารถสร้าง URL สำหรับยืนยันสิทธิ์ TikTok ได้');
-      }
+  const connectTikTok = useCallback(
+    async (overrideClientKey?: string, overrideClientSecret?: string) => {
+      setTiktokOAuth((prev) => ({ ...prev, isConnecting: true, error: null }));
+      try {
+        const effectiveClientKey = (
+          overrideClientKey ||
+          tiktokOAuthRef.current.clientKey ||
+          credentialsRef.current.tiktok.clientKey ||
+          ''
+        ).trim();
+        const effectiveClientSecret = (
+          overrideClientSecret ||
+          tiktokOAuthRef.current.clientSecret ||
+          credentialsRef.current.tiktok.clientSecret ||
+          ''
+        ).trim();
 
-      // Open popup directly to TikTok authorization URL
-      const popupWidth = 600;
-      const popupHeight = 720;
-      const left = window.screenX + (window.outerWidth - popupWidth) / 2;
-      const top = window.screenY + (window.outerHeight - popupHeight) / 2;
-      const popup = window.open(
-        data.authUrl,
-        'tiktok_oauth_window',
-        `width=${popupWidth},height=${popupHeight},left=${left},top=${top},status=no,menubar=no,toolbar=no`
-      );
+        if (overrideClientKey || overrideClientSecret) {
+          await saveTikTokConfig(effectiveClientKey, effectiveClientSecret);
+        }
 
-      if (!popup) {
-        throw new Error('เบราว์เซอร์บล็อกป๊อปอัป กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้');
+        const redirectUri = `${window.location.origin}/api/tiktok/callback`;
+        const resp = await fetch('/api/tiktok/auth-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientKey: effectiveClientKey,
+            clientSecret: effectiveClientSecret,
+            redirectUri,
+          }),
+        });
+
+        const data = await safeParseJsonResponse<{
+          authUrl?: string;
+          error?: string;
+          redirectUri?: string;
+        }>(resp, '/api/tiktok/auth-url');
+
+        if (!resp.ok || !data.authUrl) {
+          throw new Error(
+            data.error || 'ไม่สามารถสร้าง URL สำหรับยืนยันสิทธิ์ TikTok ได้ กรุณาตรวจสอบ Client Key'
+          );
+        }
+
+        // Open popup directly to TikTok authorization URL
+        const popupWidth = 600;
+        const popupHeight = 720;
+        const left = window.screenX + (window.outerWidth - popupWidth) / 2;
+        const top = window.screenY + (window.outerHeight - popupHeight) / 2;
+        const popup = window.open(
+          data.authUrl,
+          'tiktok_oauth_window',
+          `width=${popupWidth},height=${popupHeight},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+        );
+
+        if (!popup) {
+          throw new Error('เบราว์เซอร์บล็อกป๊อปอัป กรุณาอนุญาตป๊อปอัปสำหรับเว็บไซต์นี้');
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'ไม่สามารถเปิดหน้าต่างเชื่อมต่อได้';
+        setTiktokOAuth((prev) => ({ ...prev, isConnecting: false, error: msg }));
       }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'ไม่สามารถเปิดหน้าต่างเชื่อมต่อได้';
-      setTiktokOAuth((prev) => ({ ...prev, isConnecting: false, error: msg }));
-    }
-  }, []);
+    },
+    [saveTikTokConfig]
+  );
 
   // Disconnect TikTok
   const disconnectTikTok = useCallback(async () => {
     try {
-      await fetch('/api/tiktok/disconnect', { method: 'POST' });
-      setTiktokOAuth((prev) => ({
-        ...prev,
+      await fetch('/api/tiktok/disconnect', { method: 'POST' }).catch(() => {});
+      const nextOAuth = {
+        ...tiktokOAuthRef.current,
         isConnected: false,
+        accessToken: '',
+        refreshToken: '',
         expiresAt: null,
         openId: null,
         displayName: null,
         avatarUrl: null,
         successMessage: 'ตัดการเชื่อมต่อ TikTok เรียบร้อยแล้ว',
-      }));
+      };
+      setTiktokOAuth(nextOAuth);
+      try {
+        localStorage.setItem(TIKTOK_OAUTH_STORAGE_KEY, JSON.stringify(nextOAuth));
+      } catch {
+        // Ignore
+      }
+
+      const nextCreds: PlatformApiCredentials = {
+        ...credentialsRef.current,
+        tiktok: {
+          ...credentialsRef.current.tiktok,
+          accessToken: '',
+          refreshToken: '',
+        },
+      };
+      setCredentials(nextCreds);
+      try {
+        localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCreds));
+      } catch {
+        // Ignore
+      }
+
+      await syncPlatformConfigToFirestore(nextCreds, nextOAuth);
+
       setTimeout(() => {
         setTiktokOAuth((prev) => ({ ...prev, successMessage: null }));
       }, 4000);
     } catch {
       // Ignore
     }
-  }, []);
+  }, [syncPlatformConfigToFirestore]);
 
   // Refresh token
   const refreshTikTokToken = useCallback(async () => {
     setTiktokOAuth((prev) => ({ ...prev, isRefreshing: true, error: null }));
     try {
-      const resp = await fetch('/api/tiktok/refresh-token', { method: 'POST' });
-      const data = await resp.json();
+      const resp = await fetch('/api/tiktok/refresh-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          refreshToken:
+            tiktokOAuthRef.current.refreshToken || credentialsRef.current.tiktok.refreshToken,
+          clientKey: tiktokOAuthRef.current.clientKey || credentialsRef.current.tiktok.clientKey,
+          clientSecret:
+            tiktokOAuthRef.current.clientSecret || credentialsRef.current.tiktok.clientSecret,
+        }),
+      });
+      const data = await safeParseJsonResponse<any>(resp, '/api/tiktok/refresh-token');
       if (!resp.ok || !data.success) {
         throw new Error(data.error || 'รีเฟรชสิทธิ์ไม่สำเร็จ');
       }
-      await loadTikTokOAuthStatus();
-      setTiktokOAuth((prev) => ({
-        ...prev,
+
+      const nextOAuth = {
+        ...tiktokOAuthRef.current,
+        accessToken: data.accessToken || tiktokOAuthRef.current.accessToken,
+        refreshToken: data.refreshToken || tiktokOAuthRef.current.refreshToken,
+        expiresAt: data.expiresAt || tiktokOAuthRef.current.expiresAt,
+        lastSyncedAt: data.lastSyncedAt || new Date().toISOString(),
         isRefreshing: false,
         successMessage: 'รีเฟรชสิทธิ์การเข้าถึง TikTok สำเร็จแล้ว',
-      }));
+      };
+      setTiktokOAuth(nextOAuth);
+      try {
+        localStorage.setItem(TIKTOK_OAUTH_STORAGE_KEY, JSON.stringify(nextOAuth));
+      } catch {
+        // Ignore
+      }
+
+      const nextCreds: PlatformApiCredentials = {
+        ...credentialsRef.current,
+        tiktok: {
+          ...credentialsRef.current.tiktok,
+          accessToken: nextOAuth.accessToken || credentialsRef.current.tiktok.accessToken,
+          refreshToken: nextOAuth.refreshToken || credentialsRef.current.tiktok.refreshToken,
+        },
+      };
+      setCredentials(nextCreds);
+      try {
+        localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(nextCreds));
+      } catch {
+        // Ignore
+      }
+
+      await syncPlatformConfigToFirestore(nextCreds, nextOAuth);
+
       setTimeout(() => {
         setTiktokOAuth((prev) => ({ ...prev, successMessage: null }));
       }, 4000);
@@ -260,17 +645,21 @@ export function usePlatformSync() {
       const msg = err instanceof Error ? err.message : 'รีเฟรชสิทธิ์ไม่สำเร็จ';
       setTiktokOAuth((prev) => ({ ...prev, isRefreshing: false, error: msg }));
     }
-  }, [loadTikTokOAuthStatus]);
+  }, [syncPlatformConfigToFirestore]);
 
-  // Persist credentials
-  const updateCredentials = useCallback((newCreds: PlatformApiCredentials) => {
-    setCredentials(newCreds);
-    try {
-      localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(newCreds));
-    } catch {
-      // Ignore storage error
-    }
-  }, []);
+  // Persist credentials to localStorage & Cloud Firestore
+  const updateCredentials = useCallback(
+    (newCreds: PlatformApiCredentials) => {
+      setCredentials(newCreds);
+      try {
+        localStorage.setItem(CREDENTIALS_STORAGE_KEY, JSON.stringify(newCreds));
+      } catch {
+        // Ignore storage error
+      }
+      syncPlatformConfigToFirestore(newCreds, tiktokOAuthRef.current);
+    },
+    [syncPlatformConfigToFirestore]
+  );
 
   // Persist history ring buffer
   const pushToHistory = useCallback((item: SyncSnapshotHistoryItem) => {

@@ -17,6 +17,7 @@ import {
 import {
   db,
   auth,
+  sanitizeForFirestore,
   onAuthStateChanged,
   signInAdminWithGoogle,
   signOutAdmin,
@@ -73,46 +74,10 @@ function withBrandDefaults(creator: CreatorProfile): CreatorProfile {
   };
 }
 
-const LOCAL_STORAGE_CREATORS_KEY = 'juijui_creators_store';
-const LOCAL_STORAGE_BOOKINGS_KEY = 'juijui_bookings_store';
-
-function getStoredCreators(): CreatorProfile[] {
-  if (typeof window === 'undefined') return INITIAL_CREATORS;
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_CREATORS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map(withBrandDefaults);
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to parse local storage creators:', e);
-  }
-  return INITIAL_CREATORS;
-}
-
-function getStoredBookings(): BookingRecord[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(LOCAL_STORAGE_BOOKINGS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch (e) {
-    console.warn('Failed to parse local storage bookings:', e);
-  }
-  return [];
-}
-
 export default function App() {
-  const [creators, setCreators] = useState<CreatorProfile[]>(getStoredCreators);
-  const [activeCreatorId, setActiveCreatorId] = useState<string>(() => {
-    const list = getStoredCreators();
-    return list[0]?.id || INITIAL_CREATORS[0].id;
-  });
-  const [bookings, setBookings] = useState<BookingRecord[]>(getStoredBookings);
+  const [creators, setCreators] = useState<CreatorProfile[]>(INITIAL_CREATORS);
+  const [activeCreatorId, setActiveCreatorId] = useState<string>(INITIAL_CREATORS[0].id);
+  const [bookings, setBookings] = useState<BookingRecord[]>([]);
 
   // Firebase Auth & Cloud Firestore state
   const [adminUser, setAdminUser] = useState<User | null>(null);
@@ -141,7 +106,7 @@ export default function App() {
   const [adminEditingBrand, setAdminEditingBrand] =
     useState<BrandCollaborationItem | null>(null);
 
-  // Option A: URL Parameter (?admin=true) + LocalStorage Admin Mode State
+  // Option A: URL Parameter (?admin=true) + LocalStorage Admin Mode UI Toggle Only
   // Default for clients visiting clean URL is FALSE (Public Read-Only Mode: 100% edit buttons hidden)
   const [isAdminMode, setIsAdminMode] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -221,37 +186,22 @@ export default function App() {
     setIsAdminModalOpen(true);
   };
 
-  // 1. Track Firebase Auth state
+  // 1. Track Firebase Auth state & purge any old local data cache
   useEffect(() => {
+    try {
+      localStorage.removeItem('juijui_creators_store');
+      localStorage.removeItem('juijui_bookings_store');
+    } catch {
+      // ignore
+    }
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       setAdminUser(user);
     });
     return () => unsubAuth();
   }, []);
 
-  // 2. Load initial fallback from Express server + Real-Time Firestore /creators listener
+  // 2. 100% Pure Firebase Cloud Firestore Real-Time Sync for /creators and /bookings (Shared by all visitors)
   useEffect(() => {
-    fetch('/api/creators')
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.creators) && data.creators.length > 0) {
-          setCreators((prev) =>
-            isCloudConnected ? prev : data.creators.map(withBrandDefaults)
-          );
-        }
-      })
-      .catch(() => {});
-
-    fetch('/api/bookings')
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.bookings)) {
-          setBookings(data.bookings);
-        }
-      })
-      .catch(() => {});
-
-    // Real-time Firestore listener on /creators (publicly readable)
     const unsubCreators = onSnapshot(
       collection(db, 'creators'),
       (snapshot) => {
@@ -261,15 +211,12 @@ export default function App() {
             withBrandDefaults(d.data() as CreatorProfile)
           );
           setCreators(loadedCreators);
-          try {
-            localStorage.setItem(LOCAL_STORAGE_CREATORS_KEY, JSON.stringify(loadedCreators));
-          } catch (e) {
-            console.warn('Failed to cache creators to localStorage:', e);
-          }
-        } else if (auth.currentUser) {
-          // Auto-seed current creators into Firestore when admin is signed in and collection is empty
-          creators.forEach((c) => {
-            setDoc(doc(db, 'creators', c.id), c).catch(() => {});
+        } else {
+          // Auto-seed initial creator profile into Firestore Cloud when database collection is empty
+          INITIAL_CREATORS.forEach((c) => {
+            setDoc(doc(db, 'creators', c.id), sanitizeForFirestore(c)).catch((err) => {
+              console.warn('Initial Firestore seed notice:', err);
+            });
           });
         }
       },
@@ -277,13 +224,6 @@ export default function App() {
         console.warn('Firestore creators listener info:', error.message);
       }
     );
-
-    return () => unsubCreators();
-  }, [isCloudConnected, creators]);
-
-  // 3. Real-time Firestore /bookings listener when Admin is signed in
-  useEffect(() => {
-    if (!adminUser) return;
 
     const unsubBookings = onSnapshot(
       collection(db, 'bookings'),
@@ -293,11 +233,6 @@ export default function App() {
             (d) => d.data() as BookingRecord
           );
           setBookings(loadedBookings);
-          try {
-            localStorage.setItem(LOCAL_STORAGE_BOOKINGS_KEY, JSON.stringify(loadedBookings));
-          } catch (e) {
-            console.warn('Failed to cache bookings to localStorage:', e);
-          }
         }
       },
       (error) => {
@@ -305,8 +240,11 @@ export default function App() {
       }
     );
 
-    return () => unsubBookings();
-  }, [adminUser]);
+    return () => {
+      unsubCreators();
+      unsubBookings();
+    };
+  }, []);
 
   const currentCreator =
     creators.find((c) => c.id === activeCreatorId) || creators[0] || INITIAL_CREATORS[0];
@@ -350,73 +288,30 @@ export default function App() {
   };
 
   const handleSaveCreator = async (updated: CreatorProfile) => {
-    // 1. Update local React state & LocalStorage cache immediately (preserves edits across refresh on Vercel)
-    setCreators((prev) => {
-      const next = prev.map((c) => (c.id === updated.id ? updated : c));
-      try {
-        localStorage.setItem(LOCAL_STORAGE_CREATORS_KEY, JSON.stringify(next));
-      } catch (e) {
-        console.warn('LocalStorage save error:', e);
-      }
-      return next;
-    });
-
-    // 2. Try Express server API (works in dev environment, fails silently on static Vercel)
+    const cleanUpdated = sanitizeForFirestore(updated);
+    // 1. Write directly to Firebase Cloud Firestore (/creators/{id}) as single source of truth
     try {
-      await fetch(`/api/creators/${updated.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated),
-      });
-    } catch {
-      // ignore local server fallback error on static hosting
-    }
-
-    // 3. If signed in as Admin on Firebase, persist to Firestore Cloud /creators/{id}
-    if (auth.currentUser) {
-      try {
-        await setDoc(doc(db, 'creators', updated.id), updated);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.WRITE, `creators/${updated.id}`);
-      }
+      await setDoc(doc(db, 'creators', cleanUpdated.id), cleanUpdated);
+      setCreators((prev) => prev.map((c) => (c.id === cleanUpdated.id ? cleanUpdated : c)));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `creators/${cleanUpdated.id}`);
     }
   };
 
   const handleAddCreator = async (partial: Partial<CreatorProfile>) => {
-    const created: CreatorProfile = {
+    const created: CreatorProfile = sanitizeForFirestore({
       ...INITIAL_CREATORS[0],
       ...partial,
       id: partial.id || `creator-${Date.now()}`,
       nameTh: partial.nameTh || 'ครีเอเตอร์ใหม่',
-    };
-
-    setCreators((prev) => {
-      const next = [...prev, created];
-      try {
-        localStorage.setItem(LOCAL_STORAGE_CREATORS_KEY, JSON.stringify(next));
-      } catch (e) {
-        console.warn('LocalStorage save error:', e);
-      }
-      return next;
     });
-    setActiveCreatorId(created.id);
-
-    if (auth.currentUser) {
-      try {
-        await setDoc(doc(db, 'creators', created.id), created);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, `creators/${created.id}`);
-      }
-    }
 
     try {
-      await fetch('/api/creators', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(created),
-      });
-    } catch {
-      // Ignore on static hosting (e.g. Vercel)
+      await setDoc(doc(db, 'creators', created.id), created);
+      setCreators((prev) => [...prev, created]);
+      setActiveCreatorId(created.id);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `creators/${created.id}`);
     }
   };
 
@@ -424,69 +319,32 @@ export default function App() {
     bookingId: string,
     status: BookingRecord['status']
   ) => {
-    let updatedBooking: BookingRecord | undefined;
-    setBookings((prev) => {
-      const next = prev.map((b) => {
-        if (b.id === bookingId) {
-          updatedBooking = { ...b, status };
-          return updatedBooking;
-        }
-        return b;
-      });
-      try {
-        localStorage.setItem(LOCAL_STORAGE_BOOKINGS_KEY, JSON.stringify(next));
-      } catch (e) {
-        console.warn('LocalStorage save error:', e);
-      }
-      return next;
+    const existingBooking = bookings.find((b) => b.id === bookingId);
+    if (!existingBooking) return;
+    const updatedBooking: BookingRecord = sanitizeForFirestore({
+      ...existingBooking,
+      status,
     });
 
-    if (auth.currentUser && updatedBooking) {
-      try {
-        await setDoc(doc(db, 'bookings', bookingId), updatedBooking);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`);
-      }
-    }
-
     try {
-      await fetch(`/api/bookings/${bookingId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-    } catch {
-      // Ignore on static hosting (e.g. Vercel)
+      await setDoc(doc(db, 'bookings', bookingId), updatedBooking);
+      setBookings((prev) => prev.map((b) => (b.id === bookingId ? updatedBooking : b)));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `bookings/${bookingId}`);
     }
   };
 
   const handleResetDefaults = async () => {
-    const freshDefaults = structuredClone(INITIAL_CREATORS);
-    setCreators(freshDefaults);
-    setActiveCreatorId(freshDefaults[0].id);
-
-    try {
-      localStorage.removeItem(LOCAL_STORAGE_CREATORS_KEY);
-      localStorage.removeItem(LOCAL_STORAGE_BOOKINGS_KEY);
-    } catch (e) {
-      console.warn('LocalStorage reset error:', e);
-    }
-
-    if (auth.currentUser) {
-      for (const c of freshDefaults) {
-        try {
-          await setDoc(doc(db, 'creators', c.id), c);
-        } catch (err) {
-          handleFirestoreError(err, OperationType.WRITE, `creators/${c.id}`);
-        }
+    const freshDefaults = sanitizeForFirestore(structuredClone(INITIAL_CREATORS));
+    for (const c of freshDefaults) {
+      try {
+        await setDoc(doc(db, 'creators', c.id), c);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, `creators/${c.id}`);
       }
     }
-
-    try {
-      await fetch('/api/creators/reset', { method: 'POST' });
-    } catch {
-      // Ignore on static hosting (e.g. Vercel)
-    }
+    setCreators(freshDefaults);
+    setActiveCreatorId(freshDefaults[0].id);
   };
 
   const handleLoginGoogle = async () => {
@@ -494,12 +352,11 @@ export default function App() {
     try {
       const user = await signInAdminWithGoogle();
       if (user) {
-        // Seed current creators to Firestore upon admin login so Cloud DB is immediately up to date
         for (const c of creators) {
           try {
-            await setDoc(doc(db, 'creators', c.id), c);
+            await setDoc(doc(db, 'creators', c.id), sanitizeForFirestore(c));
           } catch {
-            // If user is not dramaeveryday222@gmail.com, Firestore rule blocks write gracefully
+            // ignore
           }
         }
       }

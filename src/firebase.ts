@@ -8,15 +8,23 @@ import {
   User,
 } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
   doc,
   getDocFromServer,
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = initializeFirestore(
+  app,
+  { ignoreUndefinedProperties: true },
+  firebaseConfig.firestoreDatabaseId
+);
 export const auth = getAuth(app);
+
+export function sanitizeForFirestore<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
 
 export const OWNER_ADMIN_EMAIL = 'dramaeveryday222@gmail.com';
 

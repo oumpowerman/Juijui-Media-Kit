@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Check, Key, BookOpen } from 'lucide-react';
 import {
   PlatformApiCredentials,
@@ -53,6 +53,10 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
   const [isApplying, setIsApplying] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState<string | null>(null);
   const [showApiGuideModal, setShowApiGuideModal] = useState(false);
+
+  useEffect(() => {
+    setLocalCreds(credentials);
+  }, [credentials]);
 
   const toggleShowToken = (key: string) => {
     setShowTokens((prev) => ({ ...prev, [key]: !prev[key] }));

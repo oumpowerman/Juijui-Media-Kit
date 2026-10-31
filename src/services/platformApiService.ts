@@ -17,6 +17,7 @@ export interface PlatformApiCredentials {
     clientKey: string;
     clientSecret?: string;
     accessToken: string;
+    refreshToken?: string;
     username: string;
   };
   instagram: {
@@ -185,6 +186,36 @@ export function parseCountToNumber(raw: string | number): number {
   else if (cleaned.includes('K')) num *= 1_000;
   return Number.isNaN(num) ? 0 : Math.round(num);
 }
+
+/**
+ * Safely parses a fetch Response as JSON, preventing "Unexpected token '<', <!doctype... is not valid JSON"
+ * when a static host or misconfigured rewrite returns index.html instead of an API response.
+ */
+export async function safeParseJsonResponse<T = any>(
+  resp: Response,
+  endpointLabel = 'API'
+): Promise<T> {
+  const contentType = resp.headers.get('content-type') || '';
+  const rawText = await resp.text();
+  const trimmed = rawText.trimStart().toLowerCase();
+
+  if (
+    contentType.includes('text/html') ||
+    trimmed.startsWith('<!doctype') ||
+    trimmed.startsWith('<html')
+  ) {
+    throw new Error(
+      `เซิร์ฟเวอร์ (${endpointLabel}) ตอบกลับเป็นหน้าเว็บ HTML แทนที่จะเป็นข้อมูล JSON กรุณาตรวจสอบว่าได้ Deploy โค้ดล่าสุดที่มีโฟลเดอร์ /api/tiktok/* และไฟล์ vercel.json ขึ้น Vercel แล้ว`
+    );
+  }
+
+  try {
+    return rawText ? (JSON.parse(rawText) as T) : ({} as T);
+  } catch {
+    throw new Error(`ข้อมูลที่ได้รับจาก ${endpointLabel} ไม่ใช่รูปแบบ JSON ที่ถูกต้อง`);
+  }
+}
+
 
 /**
  * Fetch YouTube Channel Statistics via YouTube Data API v3
@@ -704,108 +735,127 @@ export async function fetchFacebookStats(
 }
 
 /**
- * Fetch TikTok Stats via Open API or Verified Sandbox Endpoint
+ * Fetch TikTok Stats via Server-Side Proxy (/api/tiktok/stats)
  */
 export async function fetchTikTokStats(
   creds: PlatformApiCredentials['tiktok'],
   current: PlatformStat
 ): Promise<FetchedPlatformData> {
-  // 1. First attempt: Call Server-side Proxy /api/tiktok/stats
+  // Read cached OAuth token from localStorage if available (for stateless Vercel serverless calls)
+  let storedOAuth: {
+    accessToken?: string;
+    refreshToken?: string;
+    clientKey?: string;
+    clientSecret?: string;
+    displayName?: string;
+  } = {};
   try {
-    const headers: Record<string, string> = {};
-    if (creds.accessToken) {
-      headers['Authorization'] = `Bearer ${creds.accessToken.trim()}`;
+    const raw =
+      typeof window !== 'undefined' ? localStorage.getItem('juijui_tiktok_oauth_state') : null;
+    if (raw) {
+      storedOAuth = JSON.parse(raw) || {};
     }
-
-    const proxyResp = await fetch('/api/tiktok/stats', {
-      headers,
-    });
-
-    if (proxyResp.ok) {
-      const result = await proxyResp.json();
-      const user = result.user;
-      if (user) {
-        const followersCount = user.followerCount ?? user.follower_count ?? 0;
-        const likesCount = user.likesCount ?? user.likes_count ?? 0;
-        return {
-          platformId: 'tiktok',
-          name: 'TikTok',
-          handle: creds.username ? `@${creds.username}` : (user.displayName ? `@${user.displayName}` : current.handle),
-          followersNum: followersCount,
-          followersFormatted: formatFollowerCount(followersCount),
-          viewsFormatted: current.views,
-          likesFormatted: formatCompactMetric(likesCount),
-          commentsFormatted: current.comments,
-          sharesFormatted: current.shares,
-          erNum: current.erNum,
-          erFormatted: current.er,
-          source: 'official_api',
-          status: 'success',
-          statusMessage: `ซิงค์สำเร็จจาก TikTok Open API (${user.displayName || 'OAuth Verified'})`,
-          rawTimestamp: new Date().toISOString(),
-        };
-      }
-    } else {
-      const errData = await proxyResp.json().catch(() => ({}));
-      if (proxyResp.status === 401 && !creds.accessToken) {
-        throw new Error('กรุณากดปุ่ม "เชื่อมต่อ TikTok (OAuth 2.0)" หรือระบุ User Access Token สำรอง');
-      }
-      if (errData.error) {
-        throw new Error(errData.error);
-      }
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes('เชื่อมต่อ TikTok')) {
-      throw err;
-    }
-
-    // 2. Secondary fallback: Direct fetch to TikTok Open API if manual token is provided
-    if (creds.accessToken) {
-      try {
-        const url = `https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,likes_count,video_count,display_name`;
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Bearer ${creds.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const userInfo = data.data?.user;
-          if (userInfo) {
-            const followersCount = userInfo.follower_count || 0;
-            const likesCount = userInfo.likes_count || 0;
-
-            return {
-              platformId: 'tiktok',
-              name: 'TikTok',
-              handle: creds.username ? `@${creds.username}` : current.handle,
-              followersNum: followersCount,
-              followersFormatted: formatFollowerCount(followersCount),
-              viewsFormatted: current.views,
-              likesFormatted: formatCompactMetric(likesCount),
-              commentsFormatted: current.comments,
-              sharesFormatted: current.shares,
-              erNum: current.erNum,
-              erFormatted: current.er,
-              source: 'official_api',
-              status: 'success',
-              statusMessage: `ซิงค์สำเร็จจาก TikTok Open API (${userInfo.display_name || 'Manual Token'})`,
-              rawTimestamp: new Date().toISOString(),
-            };
-          }
-        }
-      } catch {
-        // Direct fetch failed as well, fall through
-      }
-    }
-
-    const message = err instanceof Error ? err.message : 'ไม่สามารถดึงข้อมูลจาก TikTok Open API ได้';
-    throw new Error(message);
+  } catch {
+    // Ignore storage read errors
   }
 
-  throw new Error('กรุณากดปุ่ม "เชื่อมต่อ TikTok (OAuth 2.0)" หรือระบุ User Access Token สำรอง');
+  const effectiveAccessToken = (creds.accessToken || storedOAuth.accessToken || '').trim();
+  const effectiveRefreshToken = (creds.refreshToken || storedOAuth.refreshToken || '').trim();
+  const effectiveClientKey = (creds.clientKey || storedOAuth.clientKey || '').trim();
+  const effectiveClientSecret = (creds.clientSecret || storedOAuth.clientSecret || '').trim();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (effectiveAccessToken) {
+    headers['Authorization'] = `Bearer ${effectiveAccessToken}`;
+  }
+
+  const proxyResp = await fetch('/api/tiktok/stats', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      accessToken: effectiveAccessToken,
+      refreshToken: effectiveRefreshToken,
+      clientKey: effectiveClientKey,
+      clientSecret: effectiveClientSecret,
+    }),
+  });
+
+  const result = await safeParseJsonResponse<{
+    success?: boolean;
+    error?: string;
+    requiresAuth?: boolean;
+    user?: {
+      displayName?: string;
+      followerCount?: number;
+      follower_count?: number;
+      likesCount?: number;
+      likes_count?: number;
+      videoCount?: number;
+      video_count?: number;
+    };
+    refreshedToken?: {
+      accessToken: string;
+      refreshToken: string;
+      expiresAt: number;
+    };
+  }>(proxyResp, '/api/tiktok/stats');
+
+  if (!proxyResp.ok || !result.user) {
+    if (proxyResp.status === 401 || result.requiresAuth) {
+      throw new Error(
+        result.error ||
+          'กรุณากดปุ่ม "เชื่อมต่อบัญชี TikTok (OAuth 2.0)" หรือระบุ User Access Token สำรองก่อนทำการทดสอบ'
+      );
+    }
+    throw new Error(result.error || 'ไม่สามารถดึงข้อมูลจาก TikTok Open API ได้');
+  }
+
+  // If token was auto-refreshed by the serverless proxy, update localStorage cache
+  if (result.refreshedToken?.accessToken && typeof window !== 'undefined') {
+    try {
+      const updatedOAuth = {
+        ...storedOAuth,
+        accessToken: result.refreshedToken.accessToken,
+        refreshToken: result.refreshedToken.refreshToken,
+        expiresAt: result.refreshedToken.expiresAt,
+        isConnected: true,
+      };
+      localStorage.setItem('juijui_tiktok_oauth_state', JSON.stringify(updatedOAuth));
+    } catch {
+      // Ignore
+    }
+  }
+
+  const user = result.user;
+  const followersCount = user.followerCount ?? user.follower_count ?? 0;
+  const likesCount = user.likesCount ?? user.likes_count ?? 0;
+  const videoCount = user.videoCount ?? user.video_count ?? 0;
+
+  return {
+    platformId: 'tiktok',
+    name: 'TikTok',
+    handle: creds.username
+      ? `@${creds.username.replace(/^@/, '')}`
+      : user.displayName
+      ? `@${user.displayName.replace(/^@/, '')}`
+      : current.handle,
+    followersNum: followersCount,
+    followersFormatted: formatFollowerCount(followersCount),
+    viewsFormatted: current.views,
+    likesFormatted: likesCount > 0 ? formatCompactMetric(likesCount) : current.likes,
+    commentsFormatted: current.comments,
+    sharesFormatted: current.shares,
+    erNum: current.erNum,
+    erFormatted: current.er,
+    source: 'official_api',
+    status: 'success',
+    statusMessage: `ซิงค์สำเร็จจาก TikTok Open API (${user.displayName || 'OAuth Verified'}${
+      videoCount > 0 ? ` · ${videoCount} คลิป` : ''
+    })`,
+    rawTimestamp: new Date().toISOString(),
+  };
 }
 
 /**

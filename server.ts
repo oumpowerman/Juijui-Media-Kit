@@ -233,27 +233,59 @@ app.patch('/api/bookings/:id/status', (req: Request, res: Response) => {
 // TikTok Official OAuth 2.0 & Stats Proxy
 // ==========================================
 
-function getEffectiveTikTokCredentials() {
+function getEffectiveTikTokCredentials(req?: Request) {
+  const queryKey = typeof req?.query?.clientKey === 'string' ? req.query.clientKey.trim() : '';
+  const querySecret =
+    typeof req?.query?.clientSecret === 'string' ? req.query.clientSecret.trim() : '';
+  const bodyKey = typeof req?.body?.clientKey === 'string' ? req.body.clientKey.trim() : '';
+  const bodySecret =
+    typeof req?.body?.clientSecret === 'string' ? req.body.clientSecret.trim() : '';
+
   return {
-    clientKey: store.tiktokOAuth?.clientKey || process.env.TIKTOK_CLIENT_KEY || '',
-    clientSecret: store.tiktokOAuth?.clientSecret || process.env.TIKTOK_CLIENT_SECRET || '',
+    clientKey:
+      bodyKey || queryKey || store.tiktokOAuth?.clientKey || process.env.TIKTOK_CLIENT_KEY || '',
+    clientSecret:
+      bodySecret ||
+      querySecret ||
+      store.tiktokOAuth?.clientSecret ||
+      process.env.TIKTOK_CLIENT_SECRET ||
+      '',
   };
 }
 
 function getTikTokRedirectUri(req: Request): string {
+  if (typeof req.query?.redirectUri === 'string' && req.query.redirectUri.trim()) {
+    return req.query.redirectUri.trim();
+  }
+  if (typeof req.body?.redirectUri === 'string' && req.body.redirectUri.trim()) {
+    return req.body.redirectUri.trim();
+  }
   if (process.env.APP_URL) {
     const baseUrl = process.env.APP_URL.replace(/\/$/, '');
     return `${baseUrl}/api/tiktok/callback`;
   }
   const host = req.get('host') || 'localhost:3000';
-  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  const protocol =
+    req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
   return `${protocol}://${host}/api/tiktok/callback`;
 }
 
-async function refreshTikTokAccessToken(): Promise<{ success: boolean; error?: string }> {
+async function refreshTikTokAccessToken(
+  overrideRefreshToken?: string,
+  overrideClientKey?: string,
+  overrideClientSecret?: string
+): Promise<{
+  success: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  error?: string;
+}> {
   const creds = getEffectiveTikTokCredentials();
-  const refreshToken = store.tiktokOAuth?.refreshToken;
-  if (!refreshToken || !creds.clientKey || !creds.clientSecret) {
+  const clientKey = overrideClientKey || creds.clientKey;
+  const clientSecret = overrideClientSecret || creds.clientSecret;
+  const refreshToken = overrideRefreshToken || store.tiktokOAuth?.refreshToken;
+  if (!refreshToken || !clientKey || !clientSecret) {
     return { success: false, error: 'ไม่พบ Refresh Token หรือข้อมูล Client Credentials' };
   }
   try {
@@ -261,25 +293,38 @@ async function refreshTikTokAccessToken(): Promise<{ success: boolean; error?: s
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_key: creds.clientKey,
-        client_secret: creds.clientSecret,
+        client_key: clientKey,
+        client_secret: clientSecret,
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
       }),
     });
-    const data = await resp.json();
-    if (data.data?.access_token) {
+    const data = await resp.json().catch(() => ({}));
+    const tokenObj = data.data || data;
+    if (tokenObj?.access_token) {
+      const expiresAt = Date.now() + (tokenObj.expires_in || 86400) * 1000;
       store.tiktokOAuth = {
         ...store.tiktokOAuth,
-        accessToken: data.data.access_token,
-        refreshToken: data.data.refresh_token || refreshToken,
-        expiresIn: data.data.expires_in,
-        expiresAt: Date.now() + (data.data.expires_in || 86400) * 1000,
+        clientKey,
+        clientSecret,
+        accessToken: tokenObj.access_token,
+        refreshToken: tokenObj.refresh_token || refreshToken,
+        expiresIn: tokenObj.expires_in,
+        expiresAt,
+        lastSyncedAt: new Date().toISOString(),
       };
       saveStore(store);
-      return { success: true };
+      return {
+        success: true,
+        accessToken: tokenObj.access_token,
+        refreshToken: tokenObj.refresh_token || refreshToken,
+        expiresAt,
+      };
     }
-    return { success: false, error: data.error?.message || 'Refresh token failed' };
+    return {
+      success: false,
+      error: data.error?.message || data.error_description || 'Refresh token failed',
+    };
   } catch (e: any) {
     return { success: false, error: e?.message || 'Network error refreshing token' };
   }
@@ -287,7 +332,7 @@ async function refreshTikTokAccessToken(): Promise<{ success: boolean; error?: s
 
 // GET /api/tiktok/config
 app.get('/api/tiktok/config', (req: Request, res: Response) => {
-  const creds = getEffectiveTikTokCredentials();
+  const creds = getEffectiveTikTokCredentials(req);
   const redirectUri = getTikTokRedirectUri(req);
   return res.json({
     clientKey: creds.clientKey,
@@ -297,9 +342,9 @@ app.get('/api/tiktok/config', (req: Request, res: Response) => {
     openId: store.tiktokOAuth?.openId || null,
     displayName: store.tiktokOAuth?.displayName || null,
     avatarUrl: store.tiktokOAuth?.avatarUrl || null,
-    followerCount: store.tiktokOAuth?.followerCount || null,
-    likesCount: store.tiktokOAuth?.likesCount || null,
-    videoCount: store.tiktokOAuth?.videoCount || null,
+    followerCount: store.tiktokOAuth?.followerCount ?? null,
+    likesCount: store.tiktokOAuth?.likesCount ?? null,
+    videoCount: store.tiktokOAuth?.videoCount ?? null,
     lastSyncedAt: store.tiktokOAuth?.lastSyncedAt || null,
     redirectUri,
   });
@@ -307,18 +352,18 @@ app.get('/api/tiktok/config', (req: Request, res: Response) => {
 
 // POST /api/tiktok/config
 app.post('/api/tiktok/config', (req: Request, res: Response) => {
-  const { clientKey, clientSecret } = req.body;
+  const { clientKey, clientSecret } = req.body || {};
   if (!store.tiktokOAuth) {
     store.tiktokOAuth = {};
   }
-  if (typeof clientKey === 'string') {
+  if (typeof clientKey === 'string' && clientKey.trim()) {
     store.tiktokOAuth.clientKey = clientKey.trim();
   }
-  if (typeof clientSecret === 'string') {
+  if (typeof clientSecret === 'string' && clientSecret.trim()) {
     store.tiktokOAuth.clientSecret = clientSecret.trim();
   }
   saveStore(store);
-  const creds = getEffectiveTikTokCredentials();
+  const creds = getEffectiveTikTokCredentials(req);
   return res.json({
     success: true,
     clientKey: creds.clientKey,
@@ -328,16 +373,31 @@ app.post('/api/tiktok/config', (req: Request, res: Response) => {
   });
 });
 
-// GET /api/tiktok/auth-url
-app.get('/api/tiktok/auth-url', (req: Request, res: Response) => {
-  const creds = getEffectiveTikTokCredentials();
+// GET & POST /api/tiktok/auth-url
+app.all('/api/tiktok/auth-url', (req: Request, res: Response) => {
+  const creds = getEffectiveTikTokCredentials(req);
   if (!creds.clientKey) {
     return res.status(400).json({
-      error: 'กรุณาระบุ TikTok Client Key ก่อนทำการเชื่อมต่อ OAuth',
+      error:
+        'กรุณาระบุ TikTok Client Key ในส่วน "ตั้งค่า TikTok Client Credentials" ก่อนทำการเชื่อมต่อ OAuth',
     });
   }
-  const redirectUri = (req.query.redirectUri as string) || getTikTokRedirectUri(req);
-  const state = Math.random().toString(36).substring(2, 15);
+  if (!store.tiktokOAuth) store.tiktokOAuth = {};
+  if (creds.clientKey) store.tiktokOAuth.clientKey = creds.clientKey;
+  if (creds.clientSecret) store.tiktokOAuth.clientSecret = creds.clientSecret;
+  saveStore(store);
+
+  const redirectUri = getTikTokRedirectUri(req);
+  const nonce = Math.random().toString(36).substring(2, 12);
+  const state = Buffer.from(
+    JSON.stringify({
+      n: nonce,
+      ck: creds.clientKey,
+      cs: creds.clientSecret || '',
+      ru: redirectUri,
+    })
+  ).toString('base64url');
+
   const params = new URLSearchParams({
     client_key: creds.clientKey,
     scope: 'user.info.basic,user.info.stats',
@@ -354,10 +414,11 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    const errDesc = (error_description as string) || (error as string) || 'Authentication cancelled';
+    const errDesc =
+      (error_description as string) || (error as string) || 'Authentication cancelled';
     return res.send(`<!DOCTYPE html>
 <html>
-  <head><title>TikTok Authentication</title></head>
+  <head><meta charset="utf-8" /><title>TikTok Authentication</title></head>
   <body style="font-family: system-ui, sans-serif; background: #09090b; color: #f43f5e; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center;">
     <div style="padding: 24px; max-width: 460px; background: #18181b; border: 1px solid #27272a; border-radius: 12px; color: #fff;">
       <h3 style="margin-top: 0; color: #f43f5e;">การเชื่อมต่อไม่สำเร็จ</h3>
@@ -378,32 +439,48 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
     return res.status(400).send('Missing authorization code');
   }
 
-  const creds = getEffectiveTikTokCredentials();
-  const redirectUri = getTikTokRedirectUri(req);
+  let stateCreds: { ck?: string; cs?: string; ru?: string } = {};
+  if (typeof state === 'string' && state.length > 10) {
+    try {
+      const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
+      if (decoded && typeof decoded === 'object') {
+        stateCreds = decoded;
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  const creds = getEffectiveTikTokCredentials(req);
+  const clientKey = creds.clientKey || stateCreds.ck || '';
+  const clientSecret = creds.clientSecret || stateCreds.cs || '';
+  const redirectUri = stateCreds.ru || getTikTokRedirectUri(req);
 
   try {
     const tokenResp = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_key: creds.clientKey,
-        client_secret: creds.clientSecret,
+        client_key: clientKey,
+        client_secret: clientSecret,
         grant_type: 'authorization_code',
         code: String(code),
         redirect_uri: redirectUri,
       }),
     });
 
-    const tokenData = await tokenResp.json();
+    const tokenData = await tokenResp.json().catch(() => ({}));
+    const tokenObj = tokenData.data || tokenData;
 
-    if (!tokenResp.ok || !tokenData.data?.access_token) {
+    if (!tokenResp.ok || !tokenObj?.access_token) {
       const errMsg =
         tokenData.error?.message ||
         tokenData.error_description ||
+        tokenObj?.description ||
         'Failed to exchange token with TikTok Open API';
       return res.send(`<!DOCTYPE html>
 <html>
-  <head><title>TikTok Authentication Failed</title></head>
+  <head><meta charset="utf-8" /><title>TikTok Authentication Failed</title></head>
   <body style="font-family: system-ui, sans-serif; background: #09090b; color: #f43f5e; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center;">
     <div style="padding: 24px; max-width: 480px; background: #18181b; border: 1px solid #27272a; border-radius: 12px; color: #fff;">
       <h3 style="margin-top: 0; color: #f43f5e;">ไม่สามารถแลกเปลี่ยน Access Token ได้</h3>
@@ -420,11 +497,10 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
 </html>`);
     }
 
-    const data = tokenData.data;
-    const accessToken = data.access_token;
-    const refreshToken = data.refresh_token;
-    const openId = data.open_id;
-    const expiresIn = data.expires_in || 86400;
+    const accessToken = tokenObj.access_token;
+    const refreshToken = tokenObj.refresh_token || '';
+    const openId = tokenObj.open_id || '';
+    const expiresIn = tokenObj.expires_in || 86400;
     const expiresAt = Date.now() + expiresIn * 1000;
 
     // Fetch user profile info
@@ -445,27 +521,30 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
         }
       );
       if (userResp.ok) {
-        const userData = await userResp.json();
+        const userData = await userResp.json().catch(() => ({}));
         const user = userData.data?.user;
         if (user) {
           displayName = user.display_name || '';
           avatarUrl = user.avatar_url || '';
-          followerCount = user.follower_count || 0;
-          likesCount = user.likes_count || 0;
-          videoCount = user.video_count || 0;
+          followerCount = user.follower_count ?? 0;
+          likesCount = user.likes_count ?? 0;
+          videoCount = user.video_count ?? 0;
         }
       }
     } catch (userErr) {
       console.warn('Could not fetch user profile info:', userErr);
     }
 
+    const lastSyncedAt = new Date().toISOString();
     if (!store.tiktokOAuth) store.tiktokOAuth = {};
     store.tiktokOAuth = {
       ...store.tiktokOAuth,
+      clientKey,
+      clientSecret,
       accessToken,
       refreshToken,
       openId,
-      scope: data.scope,
+      scope: tokenObj.scope,
       expiresIn,
       expiresAt,
       displayName: displayName || store.tiktokOAuth.displayName,
@@ -473,13 +552,30 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
       followerCount: followerCount || store.tiktokOAuth.followerCount,
       likesCount: likesCount || store.tiktokOAuth.likesCount,
       videoCount: videoCount || store.tiktokOAuth.videoCount,
-      lastSyncedAt: new Date().toISOString(),
+      lastSyncedAt,
     };
     saveStore(store);
 
+    const oauthResultPayload = {
+      clientKey,
+      hasClientSecret: Boolean(clientSecret),
+      isConnected: true,
+      accessToken,
+      refreshToken,
+      openId,
+      expiresIn,
+      expiresAt,
+      displayName: store.tiktokOAuth.displayName || '',
+      avatarUrl: store.tiktokOAuth.avatarUrl || '',
+      followerCount: store.tiktokOAuth.followerCount ?? 0,
+      likesCount: store.tiktokOAuth.likesCount ?? 0,
+      videoCount: store.tiktokOAuth.videoCount ?? 0,
+      lastSyncedAt,
+    };
+
     return res.send(`<!DOCTYPE html>
 <html>
-  <head><title>TikTok Authentication Succeeded</title></head>
+  <head><meta charset="utf-8" /><title>TikTok Authentication Succeeded</title></head>
   <body style="font-family: system-ui, -apple-system, sans-serif; background: #09090b; color: #10b981; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center;">
     <div style="padding: 28px; max-width: 440px; background: #18181b; border: 1px solid #27272a; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5);">
       <div style="width: 48px; height: 48px; background: rgba(16,185,129,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px; color: #10b981;">✓</div>
@@ -489,14 +585,14 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
     </div>
     <script>
       try {
+        const resultData = ${JSON.stringify(oauthResultPayload)};
+        try {
+          localStorage.setItem('juijui_tiktok_oauth_state', JSON.stringify(resultData));
+        } catch (err) {}
         if (window.opener) {
           window.opener.postMessage({
             type: 'TIKTOK_OAUTH_SUCCESS',
-            data: {
-              openId: ${JSON.stringify(openId)},
-              displayName: ${JSON.stringify(displayName)},
-              avatarUrl: ${JSON.stringify(avatarUrl)}
-            }
+            data: resultData
           }, '*');
           setTimeout(() => window.close(), 700);
         } else {
@@ -515,14 +611,17 @@ app.get(['/api/tiktok/callback', '/api/tiktok/callback/'], async (req: Request, 
 });
 
 // POST /api/tiktok/refresh-token
-app.post('/api/tiktok/refresh-token', async (_req: Request, res: Response) => {
-  const result = await refreshTikTokAccessToken();
+app.post('/api/tiktok/refresh-token', async (req: Request, res: Response) => {
+  const { refreshToken, clientKey, clientSecret } = req.body || {};
+  const result = await refreshTikTokAccessToken(refreshToken, clientKey, clientSecret);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
   return res.json({
     success: true,
-    expiresAt: store.tiktokOAuth?.expiresAt,
+    accessToken: result.accessToken || store.tiktokOAuth?.accessToken,
+    refreshToken: result.refreshToken || store.tiktokOAuth?.refreshToken,
+    expiresAt: result.expiresAt || store.tiktokOAuth?.expiresAt,
     lastSyncedAt: store.tiktokOAuth?.lastSyncedAt,
   });
 });
@@ -540,13 +639,19 @@ app.post('/api/tiktok/disconnect', (_req: Request, res: Response) => {
   return res.json({ success: true, isConnected: false });
 });
 
-// GET /api/tiktok/stats (Enterprise Proxy to TikTok Open API v2)
-app.get('/api/tiktok/stats', async (req: Request, res: Response) => {
+// GET & POST /api/tiktok/stats (Enterprise Proxy to TikTok Open API v2)
+app.all('/api/tiktok/stats', async (req: Request, res: Response) => {
   try {
     let token = '';
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.substring(7).trim();
+    }
+    if (!token && typeof req.body?.accessToken === 'string') {
+      token = req.body.accessToken.trim();
+    }
+    if (!token && typeof req.query?.accessToken === 'string') {
+      token = req.query.accessToken.trim();
     }
 
     if (!token && store.tiktokOAuth?.accessToken) {
@@ -561,9 +666,21 @@ app.get('/api/tiktok/stats', async (req: Request, res: Response) => {
       token = store.tiktokOAuth.accessToken || '';
     }
 
+    if (!token && req.body?.refreshToken) {
+      const refreshed = await refreshTikTokAccessToken(
+        req.body.refreshToken,
+        req.body.clientKey,
+        req.body.clientSecret
+      );
+      if (refreshed.accessToken) {
+        token = refreshed.accessToken;
+      }
+    }
+
     if (!token) {
       return res.status(401).json({
-        error: 'ยังไม่ได้เชื่อมต่อ TikTok หรือระบุ Access Token',
+        error:
+          'ยังไม่ได้เชื่อมต่อ TikTok OAuth 2.0 หรือยังไม่ได้ระบุ User Access Token สำรอง กรุณากดปุ่ม "เชื่อมต่อบัญชี TikTok" ด้านบนก่อนทดสอบ',
         requiresAuth: true,
       });
     }
@@ -578,14 +695,19 @@ app.get('/api/tiktok/stats', async (req: Request, res: Response) => {
       }
     );
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
-    if (!response.ok || data.error?.code !== 'ok') {
-      const errMsg = data.error?.message || `TikTok API responded with status ${response.status}`;
-      return res.status(response.status >= 400 && response.status < 500 ? response.status : 502).json({
-        error: errMsg,
-        raw: data,
-      });
+    if (!response.ok || (data.error?.code && data.error.code !== 'ok')) {
+      const errMsg =
+        data.error?.message ||
+        data.error_description ||
+        `TikTok API responded with status ${response.status}`;
+      return res
+        .status(response.status >= 400 && response.status < 500 ? response.status : 502)
+        .json({
+          error: errMsg,
+          raw: data,
+        });
     }
 
     const user = data.data?.user;
@@ -593,16 +715,16 @@ app.get('/api/tiktok/stats', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'ไม่พบข้อมูล User จาก TikTok API' });
     }
 
-    // Update store cache if using stored token
-    if (store.tiktokOAuth && store.tiktokOAuth.accessToken === token) {
-      store.tiktokOAuth.displayName = user.display_name || store.tiktokOAuth.displayName;
-      store.tiktokOAuth.avatarUrl = user.avatar_url || store.tiktokOAuth.avatarUrl;
-      store.tiktokOAuth.followerCount = user.follower_count ?? store.tiktokOAuth.followerCount;
-      store.tiktokOAuth.likesCount = user.likes_count ?? store.tiktokOAuth.likesCount;
-      store.tiktokOAuth.videoCount = user.video_count ?? store.tiktokOAuth.videoCount;
-      store.tiktokOAuth.lastSyncedAt = new Date().toISOString();
-      saveStore(store);
-    }
+    // Update store cache
+    if (!store.tiktokOAuth) store.tiktokOAuth = {};
+    store.tiktokOAuth.accessToken = token;
+    store.tiktokOAuth.displayName = user.display_name || store.tiktokOAuth.displayName;
+    store.tiktokOAuth.avatarUrl = user.avatar_url || store.tiktokOAuth.avatarUrl;
+    store.tiktokOAuth.followerCount = user.follower_count ?? store.tiktokOAuth.followerCount;
+    store.tiktokOAuth.likesCount = user.likes_count ?? store.tiktokOAuth.likesCount;
+    store.tiktokOAuth.videoCount = user.video_count ?? store.tiktokOAuth.videoCount;
+    store.tiktokOAuth.lastSyncedAt = new Date().toISOString();
+    saveStore(store);
 
     return res.json({
       success: true,

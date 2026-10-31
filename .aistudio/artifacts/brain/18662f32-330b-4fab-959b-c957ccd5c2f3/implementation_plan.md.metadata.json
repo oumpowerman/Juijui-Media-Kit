@@ -1,6 +1,6 @@
 {
-  "summary":  "แผนงานติดตั้งระบบ TikTok OAuth 2.0 เชื่อมต่ออัตโนมัติ (Connect TikTok) ตามมาตรฐาน Official API พร้อมหน้าต่าง Popup, ระบบ Backend Token Exchange, การบันทึก Token อัตโนมัติ และช่องกรอกสำรองสำหรับโหมดทดสอบ Sandbox",
-  "updatedAt":  "2026-10-30T11:51:44.428578737Z",
+  "summary":  "แผนการแก้ไขปัญหาเชื่อมต่อ TikTok OAuth 2.0 และ Individual Test บน Vercel ที่ขึ้น 에러 Unexpected token '<', \"<!doctype \"... is not valid JSON โดยสร้าง Vercel Serverless API (/api/tiktok/*), ปรับปรุง vercel.json rewrites, เพิ่มระบบตรวจสอบ JSON Response ที่ปลอดภัย และเชื่อมต่อการบันทึก Token ลงทั้ง Cloud Firestore และ LocalStorage",
+  "updatedAt":  "2026-10-31T04:20:22.475326111Z",
   "requestFeedback":  true,
   "userFacing":  true
 }
