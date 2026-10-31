@@ -427,6 +427,9 @@ export function usePlatformSync() {
           followers: diff.newFollowers,
           followersNum: diff.newFollowersNum,
           views: diff.newViews || curr.views,
+          likes: diff.newLikes || curr.likes,
+          comments: diff.newComments || curr.comments,
+          shares: diff.newShares || curr.shares,
           er: diff.newEr,
           erNum: parseFloat(diff.newEr.replace(/[^0-9.]/g, '')) || curr.erNum,
         };
@@ -574,14 +577,19 @@ export function usePlatformSync() {
             const delta = newNum - currentNum;
             const deltaPercent =
               currentNum > 0 ? parseFloat(((delta / currentNum) * 100).toFixed(2)) : 0;
-            const erDelta = parseFloat((fetchedData.erNum - item.currentFollowersNum).toFixed(2));
+            const currentErVal = parseFloat(item.currentEr.replace(/[^0-9.]/g, '')) || 0;
+            const erDelta = parseFloat((fetchedData.erNum - currentErVal).toFixed(2));
             return {
               ...item,
+              handle: fetchedData.handle || item.handle,
               newFollowersNum: newNum,
               newFollowers: fetchedData.followersFormatted,
               followerDelta: delta,
               followerDeltaPercent: deltaPercent,
               newViews: fetchedData.viewsFormatted || item.currentViews,
+              newLikes: fetchedData.likesFormatted || item.currentLikes,
+              newComments: fetchedData.commentsFormatted || item.currentComments,
+              newShares: fetchedData.sharesFormatted || item.currentShares,
               newEr: fetchedData.erFormatted,
               erDelta,
               status: fetchedData.status,

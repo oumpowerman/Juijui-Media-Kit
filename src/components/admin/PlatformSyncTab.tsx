@@ -35,6 +35,7 @@ import {
   SyncSnapshotHistoryItem,
   SinglePlatformTestResult,
   FetchedPlatformData,
+  discoverInstagramBusinessAccount,
 } from '../../services/platformApiService';
 
 interface PlatformSyncTabProps {
@@ -223,15 +224,33 @@ const PlatformTestBox: React.FC<PlatformTestBoxProps> = ({
                   </div>
                 </div>
                 <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">ยอดวิวสะสม</div>
+                  <div className="text-[9px] font-semibold text-slate-500">ยอดวิว / Reach</div>
                   <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
                     {testResult.data.viewsFormatted || '-'}
                   </div>
                 </div>
                 <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
                   <div className="text-[9px] font-semibold text-slate-500">อัตรา ER</div>
-                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5">
+                  <div className="text-xs font-bold font-mono text-violet-700 mt-0.5">
                     {testResult.data.erFormatted}
+                  </div>
+                </div>
+                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                  <div className="text-[9px] font-semibold text-slate-500">ยอดไลค์ (Likes)</div>
+                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                    {testResult.data.likesFormatted || '-'}
+                  </div>
+                </div>
+                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                  <div className="text-[9px] font-semibold text-slate-500">คอมเมนต์ (Comments)</div>
+                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                    {testResult.data.commentsFormatted || '-'}
+                  </div>
+                </div>
+                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                  <div className="text-[9px] font-semibold text-slate-500">ยอดแชร์ (Shares)</div>
+                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                    {testResult.data.sharesFormatted || '-'}
                   </div>
                 </div>
               </div>
@@ -340,6 +359,11 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
   const [copiedRedirectUri, setCopiedRedirectUri] = useState(false);
   const [isSavingTikTokConfig, setIsSavingTikTokConfig] = useState(false);
   const [tiktokConfigSavedToast, setTiktokConfigSavedToast] = useState(false);
+  const [igDiscoverLoading, setIgDiscoverLoading] = useState(false);
+  const [igDiscoverMessage, setIgDiscoverMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const toggleShowToken = (key: string) => {
     setShowTokens((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -349,6 +373,33 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
     onUpdateCredentials(localCreds);
     setCredentialsSavedToast(true);
     setTimeout(() => setCredentialsSavedToast(false), 2400);
+  };
+
+  const handleDiscoverIgAccount = async () => {
+    setIgDiscoverLoading(true);
+    setIgDiscoverMessage(null);
+    try {
+      const found = await discoverInstagramBusinessAccount(localCreds.instagram.accessToken);
+      const nextCreds: PlatformApiCredentials = {
+        ...localCreds,
+        instagram: {
+          ...localCreds.instagram,
+          igUserId: found.igUserId,
+          username: found.username || localCreds.instagram.username,
+        },
+      };
+      setLocalCreds(nextCreds);
+      onUpdateCredentials(nextCreds);
+      setIgDiscoverMessage({
+        type: 'success',
+        text: `พบบัญชี @${found.username || found.name} (IG ID: ${found.igUserId} · ผู้ติดตาม ${found.followersCount.toLocaleString()} คน) และบันทึกให้อัตโนมัติแล้ว!`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'ไม่พบบัญชี IG Business จาก Token นี้';
+      setIgDiscoverMessage({ type: 'error', text: msg });
+    } finally {
+      setIgDiscoverLoading(false);
+    }
   };
 
   const handleSaveTikTokConfig = async () => {
@@ -635,6 +686,48 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
                           {item.erDelta > 0 ? `+${item.erDelta}%` : `${item.erDelta}%`}
                         </div>
                       )}
+                    </div>
+
+                    {/* Likes Metric */}
+                    <div className="p-2.5 rounded-lg bg-white border border-slate-200/90">
+                      <div className="text-[10px] font-semibold text-slate-500">ยอดไลค์ (Likes)</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono text-slate-500">
+                          {item.currentLikes || '-'}
+                        </span>
+                        <ArrowRight className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs font-bold font-mono text-slate-900">
+                          {item.newLikes || '-'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Comments Metric */}
+                    <div className="p-2.5 rounded-lg bg-white border border-slate-200/90">
+                      <div className="text-[10px] font-semibold text-slate-500">คอมเมนต์ (Comments)</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono text-slate-500">
+                          {item.currentComments || '-'}
+                        </span>
+                        <ArrowRight className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs font-bold font-mono text-slate-900">
+                          {item.newComments || '-'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Shares Metric */}
+                    <div className="p-2.5 rounded-lg bg-white border border-slate-200/90">
+                      <div className="text-[10px] font-semibold text-slate-500">ยอดแชร์ (Shares)</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono text-slate-500">
+                          {item.currentShares || '-'}
+                        </span>
+                        <ArrowRight className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs font-bold font-mono text-slate-900">
+                          {item.newShares || '-'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1210,9 +1303,21 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-[10px] font-semibold text-slate-600 mb-1">
-                  IG Business / User ID
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-semibold text-slate-600">
+                    IG Business / User ID
+                  </label>
+                  <button
+                    type="button"
+                    disabled={igDiscoverLoading || !localCreds.instagram.accessToken}
+                    onClick={handleDiscoverIgAccount}
+                    className="text-[10px] font-bold text-violet-600 hover:text-violet-800 disabled:opacity-40 cursor-pointer flex items-center gap-0.5"
+                    title="ดึงรหัส 17 หลักของ IG Business Account อัตโนมัติจาก Token ที่ใส่ไว้"
+                  >
+                    <Sparkles className="w-2.5 h-2.5" />
+                    <span>{igDiscoverLoading ? 'กำลังค้นหา...' : 'ค้นหา ID อัตโนมัติ'}</span>
+                  </button>
+                </div>
                 <input
                   type="text"
                   value={localCreds.instagram.igUserId}
@@ -1244,6 +1349,25 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
                 />
               </div>
             </div>
+
+            {igDiscoverMessage && (
+              <div
+                className={`p-2 rounded-lg border text-[11px] flex items-center justify-between gap-2 ${
+                  igDiscoverMessage.type === 'success'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                }`}
+              >
+                <span>{igDiscoverMessage.text}</span>
+                <button
+                  type="button"
+                  onClick={() => setIgDiscoverMessage(null)}
+                  className="text-slate-400 hover:text-slate-700 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Instagram Individual Test Box */}
             <PlatformTestBox
