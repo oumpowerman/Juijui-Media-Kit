@@ -16,7 +16,13 @@ import {
   Sparkles,
   Clock,
 } from 'lucide-react';
-import { CreatorProfile } from '../../../data/creatorData';
+import {
+  CreatorProfile,
+  StatsTimeframe,
+  STATS_TIMEFRAME_OPTIONS,
+  resolveOverviewForTimeframe,
+  resolvePlatformMetricsForTimeframe,
+} from '../../../data/creatorData';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { PlatformBrandIcon } from '../../ui/PlatformBrandIcon';
 import {
@@ -27,6 +33,8 @@ import {
 
 interface HeroRightSpotlightCardProps {
   currentCreator: CreatorProfile;
+  activeStatsTimeframe: StatsTimeframe;
+  onSelectStatsTimeframe: (tf: StatsTimeframe) => void;
   parallaxY: MotionValue<number>;
   onOpenAdmin?: () => void;
   onOpenBooking: () => void;
@@ -63,11 +71,17 @@ const TwinkleSparkle: React.FC<{
 
 export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
   currentCreator,
+  activeStatsTimeframe,
+  onSelectStatsTimeframe,
   parallaxY,
   onOpenAdmin,
   onOpenBooking,
 }) => {
   const rightCardRef = useRef<HTMLDivElement>(null);
+  const activeOverview = resolveOverviewForTimeframe(currentCreator, activeStatsTimeframe);
+  const activeTfOption =
+    STATS_TIMEFRAME_OPTIONS.find((o) => o.id === activeStatsTimeframe) ||
+    STATS_TIMEFRAME_OPTIONS[1];
 
   // 3D Interactive Mouse-Tracking Tilt & Dynamic Spotlight
   const mouseX = useMotionValue(0.5);
@@ -205,27 +219,39 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
           }}
         />
 
-        {/* TOP-RIGHT TIMEFRAME BADGE (iOS Minimal Frosted Glass Capsule) */}
+        {/* TOP-RIGHT INTERACTIVE TIMEFRAME SWITCHER BADGE (iOS Minimal Frosted Glass Capsule) */}
         <div className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 z-25">
-          <motion.div
-            whileHover={{ scale: 1.04 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 24 }}
-            className="group/timeframe relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/12 hover:bg-white/18 backdrop-blur-xl border border-white/20 text-[11px] text-violet-100 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] transition-all cursor-default select-none"
-            title="รอบสถิติ: ผู้ติดตาม & ER ย้อนหลัง 28 วัน · ยอดวิวสะสม 60 วันล่าสุด"
-          >
-            {/* Live Telemetry Ping Radar Dot */}
-            <span className="relative flex h-2 w-2 shrink-0">
+          <div className="group/timeframe relative flex items-center gap-1 p-1 rounded-full bg-white/12 backdrop-blur-xl border border-white/20 text-[11px] text-violet-100 shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.25)] select-none">
+            <span className="relative flex h-2 w-2 shrink-0 ml-1.5 mr-0.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
             </span>
 
-            {/* Timeframe Label */}
-            <div className="flex items-center gap-1 font-semibold whitespace-nowrap">
-              <Clock className="w-3 h-3 text-amber-300 shrink-0" />
-              <span className="text-white font-bold">28 วันล่าสุด</span>
-              <span className="text-white/40">·</span>
-              <span className="text-violet-200">วิว 60 วัน</span>
-            </div>
+            <Clock className="w-3 h-3 text-amber-300 shrink-0 mr-0.5" />
+
+            {(
+              [
+                { id: '28d', label: '28 วัน' },
+                { id: '60d', label: '60 วัน' },
+                { id: 'lifetime', label: 'Lifetime' },
+              ] as const
+            ).map((tf) => {
+              const isSelected = activeStatsTimeframe === tf.id;
+              return (
+                <button
+                  key={tf.id}
+                  type="button"
+                  onClick={() => onSelectStatsTimeframe(tf.id)}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-300 text-slate-950 shadow-2xs'
+                      : 'text-violet-100 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {tf.label}
+                </button>
+              );
+            })}
 
             {/* Micro-sparkle right on the badge */}
             <TwinkleSparkle
@@ -234,10 +260,7 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
               duration={2.8}
               delay={0.2}
             />
-
-            {/* Subtle Specular Top Rim */}
-            <div className="absolute inset-x-2 top-0 h-px bg-linear-to-r from-transparent via-white/60 to-transparent pointer-events-none" />
-          </motion.div>
+          </div>
         </div>
 
         {/* Top Avatar + Giant Live Count-Up Total Followers */}
@@ -347,10 +370,10 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                   <Eye className="w-3.5 h-3.5 text-amber-300" />
                 </motion.div>
                 <AnimatedCounter
-                  value={currentCreator.overview.totalViews60d}
-                  duration={1.6}
+                  value={activeOverview.totalViews}
+                  duration={1.5}
                 />
-                <span>Views (60d)</span>
+                <span>{activeTfOption.cardViewsLabel}</span>
               </span>
 
               <span className="relative inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 text-emerald-300 font-semibold shadow-2xs">
@@ -365,8 +388,8 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                 </motion.div>
                 <span>ER </span>
                 <AnimatedCounter
-                  value={currentCreator.overview.totalEr}
-                  duration={1.6}
+                  value={activeOverview.totalEr}
+                  duration={1.5}
                 />
 
                 {/* Emerald sparkle on ER */}
@@ -567,7 +590,10 @@ export const HeroRightSpotlightCard: React.FC<HeroRightSpotlightCardProps> = ({
                   <div className="relative z-10 flex items-center gap-2.5 shrink-0">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/10 text-[11px] text-violet-200 font-mono-num">
                       <Flame className="w-3 h-3 text-amber-400" />
-                      <AnimatedCounter value={plat.er} duration={1.5} />
+                      <AnimatedCounter
+                        value={resolvePlatformMetricsForTimeframe(plat, activeStatsTimeframe).er}
+                        duration={1.4}
+                      />
                     </span>
                     <span
                       className={`font-bold font-mono-num w-16 text-right group-hover:scale-105 transition-transform ${tierStyles.followers}`}

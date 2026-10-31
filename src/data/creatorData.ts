@@ -5,6 +5,9 @@
 
 // Types & Interfaces
 export type {
+  StatsTimeframe,
+  TimeframePlatformMetrics,
+  TimeframeOverviewMetrics,
   PlatformStat,
   ViralWorkItem,
   BrandReplyItem,
@@ -16,12 +19,30 @@ export type {
   BrandCategoryType,
   BrandCollaborationItem,
   BrandShowcaseConfig,
+  ProofSummaryConfig,
+  SectionHeadersConfig,
   CreatorProfile,
   BookingRecord,
+  DemographicAgeGroup,
+  DemographicGender,
+  DemographicLocation,
+  PlatformDemographicsData,
+  CreatorDemographics,
 } from './types';
 
 // Helper utilities
-export { resolveGoogleDriveImage, extractGoogleDriveId, resolveVideoSource } from './helpers';
+export {
+  STATS_TIMEFRAME_OPTIONS,
+  parseFormattedStatNumber,
+  formatCompactStatNumber,
+  resolvePlatformMetricsForTimeframe,
+  resolveOverviewForTimeframe,
+  calculateFollowerWeightedDemographics,
+  resolveDemographicsForView,
+  resolveGoogleDriveImage,
+  extractGoogleDriveId,
+  resolveVideoSource,
+} from './helpers';
 export type { VideoSourceInfo } from './helpers';
 
 // Modular Datasets

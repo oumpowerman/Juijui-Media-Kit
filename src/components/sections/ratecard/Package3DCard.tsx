@@ -23,7 +23,29 @@ export const Package3DCard: React.FC<Package3DCardProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const isPopular = idx === 1;
+  const isPopular = pkg.isPopular ?? idx === 1;
+
+  // Parse platform scope and post count dynamically from package fields
+  const platMatch = (pkg.platforms || '').match(/^([^(]+)(?:\(([^)]+)\))?$/);
+  const platMainText =
+    pkg.platformScopeLabel?.trim() ||
+    (platMatch ? platMatch[1].trim() : pkg.platforms) ||
+    'ทุกช่องทางโซเชียล';
+  const platSubBadge =
+    platMatch && platMatch[2]
+      ? platMatch[2].trim()
+      : pkg.platforms.toLowerCase().includes('ทุก')
+      ? '4 แพลตฟอร์ม'
+      : '';
+
+  const postMatch = (pkg.totalPosts || '').match(/^([^(]+)(?:\(([^)]+)\))?$/);
+  const postBadgeText = (postMatch ? postMatch[1].trim() : pkg.totalPosts) || '1 โพสต์';
+  const postParenNote = postMatch && postMatch[2] ? postMatch[2].trim() : '';
+  const distributionLabel =
+    pkg.distributionSubLabel?.trim() ||
+    postParenNote ||
+    pkg.bestFor ||
+    'เผยแพร่ตามขอบเขตแพ็กเกจ';
 
   const headerBg =
     idx === 0
@@ -136,29 +158,23 @@ export const Package3DCard: React.FC<Package3DCardProps> = ({
                   <div className="flex items-center gap-2 min-w-0">
                     <PlatformBadgeGroup platformsText={pkg.platforms} size="xs" wrap={false} />
                     <span className="text-xs font-bold text-violet-950 truncate">
-                      {pkg.id === 'pkg-starter' ? 'ช่องทาง TikTok' : 'ทุกช่องทางโซเชียล'}
+                      {platMainText}
                     </span>
                   </div>
-                  <span className="text-[11px] font-semibold text-slate-500 shrink-0">
-                    {pkg.id === 'pkg-starter' ? '1 แพลตฟอร์ม' : '4 แพลตฟอร์ม'}
-                  </span>
+                  {platSubBadge && (
+                    <span className="text-[11px] font-semibold text-slate-500 shrink-0 max-w-[130px] truncate">
+                      {platSubBadge}
+                    </span>
+                  )}
                 </div>
 
                 {/* Line 2: Distribution Output & Post Count Badge */}
                 <div className="flex items-center justify-between pt-2 border-t border-violet-200/60 text-xs">
                   <span className="text-[11px] text-slate-600 font-medium truncate mr-2">
-                    {pkg.id === 'pkg-starter'
-                      ? 'เผยแพร่เฉพาะหน้าโปรไฟล์'
-                      : pkg.id === 'pkg-standard'
-                      ? 'กระจายครบทุกแพลตฟอร์ม'
-                      : '3 คลิป × ครบ 4 แพลตฟอร์ม'}
+                    {distributionLabel}
                   </span>
                   <span className="text-[11px] font-bold text-violet-700 bg-white px-2.5 py-0.5 rounded-full border border-violet-200 shadow-2xs font-mono-num shrink-0 whitespace-nowrap">
-                    {pkg.id === 'pkg-starter'
-                      ? '1 โพสต์'
-                      : pkg.id === 'pkg-standard'
-                      ? '4 โพสต์'
-                      : 'รวม 12 โพสต์'}
+                    {postBadgeText}
                   </span>
                 </div>
               </div>

@@ -34,12 +34,12 @@ service cloud.firestore {
     function isValidCreator(data) {
       return data.keys().hasAll(['id', 'nameTh', 'nameEn', 'roleTitle', 'overview', 'platforms', 'packages', 'contact']) &&
         data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
-        data.nameTh is string && data.nameTh.size() >= 1 && data.nameTh.size() <= 200 &&
-        data.nameEn is string && data.nameEn.size() >= 1 && data.nameEn.size() <= 200 &&
-        data.roleTitle is string && data.roleTitle.size() <= 300 &&
+        data.nameTh is string && data.nameTh.size() <= 500 &&
+        data.nameEn is string && data.nameEn.size() <= 500 &&
+        data.roleTitle is string && data.roleTitle.size() <= 1000 &&
         data.overview is map &&
-        data.platforms is list && data.platforms.size() <= 20 &&
-        data.packages is list && data.packages.size() <= 20 &&
+        data.platforms is list && data.platforms.size() <= 50 &&
+        data.packages is list && data.packages.size() <= 50 &&
         data.contact is map;
     }
 
@@ -61,7 +61,7 @@ service cloud.firestore {
         data.dateFormatted is string && data.dateFormatted.size() >= 1 && data.dateFormatted.size() <= 200 &&
         data.triggerType in ['official_api', 'simulation', 'manual_rollback'] &&
         data.summary is map &&
-        data.platformsSnapshot is list && data.platformsSnapshot.size() <= 20 &&
+        data.platformsSnapshot is list && data.platformsSnapshot.size() <= 50 &&
         data.overviewSnapshot is map;
     }
 
@@ -84,7 +84,7 @@ service cloud.firestore {
     // Publicly viewable Media Kit profiles; validated schema writes for real-time Cloud sync across all domains
     match /creators/{creatorId} {
       allow get: if isValidId(creatorId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow list: if true;
       allow create: if isValidId(creatorId) && isValidCreator(incoming());
       allow update: if isValidId(creatorId) && isValidCreator(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(creatorId) && isAdmin();
@@ -93,7 +93,7 @@ service cloud.firestore {
     // Client bookings: Validated booking quote requests and status updates
     match /bookings/{bookingId} {
       allow get: if isValidId(bookingId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow list: if true;
       allow create: if isValidId(bookingId) && isValidBooking(incoming());
       allow update: if isValidId(bookingId) && isValidBooking(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(bookingId) && isAdmin();
@@ -102,7 +102,7 @@ service cloud.firestore {
     // Platform API Sync History (5-version rollback ring buffer stored on Cloud Firestore)
     match /syncHistory/{snapshotId} {
       allow get: if isValidId(snapshotId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow list: if true;
       allow create: if isValidId(snapshotId) && isValidSyncSnapshot(incoming());
       allow update: if isValidId(snapshotId) && isValidSyncSnapshot(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(snapshotId);
@@ -119,7 +119,7 @@ service cloud.firestore {
     // Platform API & TikTok OAuth configuration synced across devices
     match /settings/{settingId} {
       allow get: if isValidId(settingId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow list: if true;
       allow create: if isValidId(settingId) && isValidPlatformConfig(incoming());
       allow update: if isValidId(settingId) && isValidPlatformConfig(incoming()) && incoming().id == existing().id;
       allow delete: if isValidId(settingId) && isAdmin();

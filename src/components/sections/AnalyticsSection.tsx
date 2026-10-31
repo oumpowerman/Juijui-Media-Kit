@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, useScroll, useTransform, useSpring } from 'motion/react';
-import { CreatorProfile } from '../../data/creatorData';
+import { CreatorProfile, StatsTimeframe } from '../../data/creatorData';
 import {
   AnalyticsBackgroundCanvas,
   AnalyticsHeaderTabs,
@@ -10,6 +10,8 @@ import {
 
 export interface AnalyticsSectionProps {
   currentCreator: CreatorProfile;
+  activeStatsTimeframe: StatsTimeframe;
+  onSelectStatsTimeframe: (tf: StatsTimeframe) => void;
   activePlatformHighlight: string;
   onSelectPlatformHighlight: (platformId: string) => void;
   onOpenAdmin?: () => void;
@@ -17,6 +19,8 @@ export interface AnalyticsSectionProps {
 
 export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
   currentCreator,
+  activeStatsTimeframe,
+  onSelectStatsTimeframe,
   activePlatformHighlight,
   onSelectPlatformHighlight,
   onOpenAdmin,
@@ -91,6 +95,9 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
         {/* 2. SECTION HEADER & IOS SEGMENTED CONTROL TABS */}
         <AnalyticsHeaderTabs
           platforms={currentCreator.platforms}
+          sectionHeaders={currentCreator.sectionHeaders}
+          activeStatsTimeframe={activeStatsTimeframe}
+          onSelectStatsTimeframe={onSelectStatsTimeframe}
           activePlatformHighlight={activePlatformHighlight}
           onSelectPlatform={handleSelectPlatform}
           onOpenAdmin={onOpenAdmin}
@@ -113,6 +120,7 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
                   cardRefs.current[plat.id] = el;
                 }}
                 platform={plat}
+                activeStatsTimeframe={activeStatsTimeframe}
                 isActive={isActive}
                 isDimmed={isDimmed}
                 onSelect={() =>
@@ -148,6 +156,8 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({
         {/* 4. AUDIENCE DEMOGRAPHICS BREAKDOWN (Age, Gender, Geographic Locations) */}
         <AudienceDemographicsCard
           demographics={currentCreator.demographics}
+          platforms={currentCreator.platforms}
+          creator={currentCreator}
           demographicsParallaxY={demographicsParallaxY}
         />
       </div>

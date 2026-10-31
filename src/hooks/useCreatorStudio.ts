@@ -1,19 +1,45 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CreatorProfile,
   BookingRecord,
   ViralWorkItem,
   CommentProofItem,
+  BrandReplyItem,
+  ProofSummaryConfig,
+  SectionHeadersConfig,
   RatePackage,
   AddOnItem,
   PlatformStat,
+  StatsTimeframe,
+  TimeframePlatformMetrics,
+  TimeframeOverviewMetrics,
   BrandCollaborationItem,
   BrandCategoryType,
   BrandSampleClip,
   BrandShowcaseConfig,
+  PlatformDemographicsData,
   INITIAL_CREATORS,
   resolveGoogleDriveImage,
+  resolvePlatformMetricsForTimeframe,
+  resolveOverviewForTimeframe,
+  calculateFollowerWeightedDemographics,
 } from '../data/creatorData';
+
+function sanitizeForFirestore<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
+    if (val !== undefined) {
+      cleaned[key] = sanitizeForFirestore(val);
+    }
+  }
+  return cleaned as T;
+}
 
 export type AdminTabType =
   | 'identity'
@@ -55,6 +81,8 @@ export function useCreatorStudio({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedNotice, setSavedNotice] = useState<string | null>(null);
+  const [saveErrorNotice, setSaveErrorNotice] = useState<string | null>(null);
+  const prevCreatorIdRef = useRef<string>(creator.id);
 
   // Sync activeTab when initialTab changes (e.g. from section Quick Edit button)
   useEffect(() => {
@@ -76,30 +104,57 @@ export function useCreatorStudio({
     }
   }, [initialEditingBrand]);
 
-  // Sync draft when active creator changes externally
+  // Sync draft when active creator changes externally, without wiping out active unsaved edits
   useEffect(() => {
-    setDraftCreator(creator);
-    setHasUnsavedChanges(false);
-    setEditingMediaItem(null);
-    setEditingCommentItem(null);
-  }, [creator]);
+    const isDifferentCreator = prevCreatorIdRef.current !== creator.id;
+    if (isDifferentCreator) {
+      prevCreatorIdRef.current = creator.id;
+      setDraftCreator(creator);
+      setHasUnsavedChanges(false);
+      setEditingMediaItem(null);
+      setEditingCommentItem(null);
+      setSaveErrorNotice(null);
+    } else if (!hasUnsavedChanges) {
+      setDraftCreator(creator);
+    }
+  }, [creator, hasUnsavedChanges]);
 
   const triggerToast = useCallback((message: string) => {
     setSavedNotice(message);
     setTimeout(() => {
       setSavedNotice((prev) => (prev === message ? null : prev));
-    }, 2800);
+    }, 3200);
+  }, []);
+
+  const clearSaveErrorNotice = useCallback(() => {
+    setSaveErrorNotice(null);
   }, []);
 
   // Save current draftCreator to Firestore + Backend
   const saveDraftChanges = useCallback(
-    async (customDraft?: CreatorProfile, customMessage?: string) => {
-      const target = customDraft || draftCreator;
+    async (customDraft?: CreatorProfile, customMessage?: string): Promise<boolean> => {
+      const target = sanitizeForFirestore(customDraft || draftCreator);
       setIsSaving(true);
+      setSaveErrorNotice(null);
       try {
         await onSaveCreator(target);
         setHasUnsavedChanges(false);
-        triggerToast(customMessage || 'บันทึกข้อมูลลงฐานข้อมูลเรียบร้อยแล้ว');
+        triggerToast(customMessage || 'บันทึกข้อมูลลงฐานข้อมูล Cloud เรียบร้อยแล้ว');
+        return true;
+      } catch (err) {
+        let readableError = err instanceof Error ? err.message : String(err);
+        try {
+          const parsed = JSON.parse(readableError);
+          if (parsed && typeof parsed.error === 'string') {
+            readableError = `${parsed.error}${parsed.path ? ` (Path: ${parsed.path})` : ''}`;
+          }
+        } catch {
+          // Not JSON, keep readableError as-is
+        }
+        setSaveErrorNotice(
+          `บันทึกข้อมูลไม่สำเร็จ: ${readableError}`
+        );
+        return false;
       } finally {
         setIsSaving(false);
       }
@@ -113,6 +168,20 @@ export function useCreatorStudio({
       setDraftCreator((prev) => ({
         ...prev,
         [field]: value,
+      }));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const updateSectionHeaderField = useCallback(
+    (field: keyof SectionHeadersConfig, value: string) => {
+      setDraftCreator((prev) => ({
+        ...prev,
+        sectionHeaders: {
+          ...(prev.sectionHeaders || {}),
+          [field]: value,
+        },
       }));
       setHasUnsavedChanges(true);
     },
@@ -281,6 +350,103 @@ export function useCreatorStudio({
     []
   );
 
+  const updateDefaultStatsTimeframe = useCallback((timeframe: StatsTimeframe) => {
+    setDraftCreator((prev) => ({
+      ...prev,
+      defaultStatsTimeframe: timeframe,
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const updateOverviewTimeframeStat = useCallback(
+    (
+      timeframe: StatsTimeframe,
+      field: keyof TimeframeOverviewMetrics,
+      value: string
+    ) => {
+      setDraftCreator((prev) => {
+        const currentOverviewTf = {
+          '28d': resolveOverviewForTimeframe(prev, '28d'),
+          '60d': resolveOverviewForTimeframe(prev, '60d'),
+          lifetime: resolveOverviewForTimeframe(prev, 'lifetime'),
+        };
+        currentOverviewTf[timeframe] = {
+          ...currentOverviewTf[timeframe],
+          [field]: value,
+        };
+
+        const nextOverview = { ...prev.overview };
+        if (timeframe === '60d') {
+          if (field === 'totalViews') nextOverview.totalViews60d = value;
+          else if (field === 'totalEr') nextOverview.totalEr = value;
+          else if (field === 'avgViewsPerContent') nextOverview.avgViewsPerContent = value;
+          else if (field === 'monthlyReach') nextOverview.monthlyReach = value;
+          else if (field === 'monthlyLikes') nextOverview.monthlyLikes = value;
+        }
+
+        return {
+          ...prev,
+          overview: nextOverview,
+          overviewTimeframes: currentOverviewTf,
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const updatePlatformTimeframeStat = useCallback(
+    (
+      platformId: PlatformStat['id'],
+      timeframe: StatsTimeframe,
+      field: keyof TimeframePlatformMetrics,
+      value: string
+    ) => {
+      setDraftCreator((prev) => ({
+        ...prev,
+        platforms: prev.platforms.map((pl) => {
+          if (pl.id !== platformId) return pl;
+          const allTf = {
+            '28d': resolvePlatformMetricsForTimeframe(pl, '28d'),
+            '60d': resolvePlatformMetricsForTimeframe(pl, '60d'),
+            lifetime: resolvePlatformMetricsForTimeframe(pl, 'lifetime'),
+          };
+          const targetTf: TimeframePlatformMetrics = {
+            ...allTf[timeframe],
+            [field]: value,
+          };
+          if (field === 'er') {
+            const numMatch = value.match(/[\d.]+/);
+            if (numMatch) {
+              const num = parseFloat(numMatch[0]);
+              if (!Number.isNaN(num)) targetTf.erNum = num;
+            }
+          }
+          allTf[timeframe] = targetTf;
+
+          const updatedPlat: PlatformStat = {
+            ...pl,
+            timeframes: allTf,
+          };
+          // Keep root platform fields synced with '60d' timeframe for legacy compatibility
+          if (timeframe === '60d') {
+            if (field === 'views') updatedPlat.views = value;
+            else if (field === 'likes') updatedPlat.likes = value;
+            else if (field === 'comments') updatedPlat.comments = value;
+            else if (field === 'shares') updatedPlat.shares = value;
+            else if (field === 'er') {
+              updatedPlat.er = value;
+              updatedPlat.erNum = targetTf.erNum;
+            }
+          }
+          return updatedPlat;
+        }),
+      }));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
   const updateAgeGroupPercent = useCallback((index: number, percent: number) => {
     setDraftCreator((prev) => ({
       ...prev,
@@ -294,34 +460,486 @@ export function useCreatorStudio({
     setHasUnsavedChanges(true);
   }, []);
 
-  const updateGenderPercent = useCallback((index: number, percent: number) => {
-    setDraftCreator((prev) => ({
-      ...prev,
-      demographics: {
-        ...prev.demographics,
-        gender: prev.demographics.gender.map((g, idx) =>
-          idx === index ? { ...g, percent } : g
-        ),
-      },
-    }));
-    setHasUnsavedChanges(true);
-  }, []);
+  // Helper to ensure target platform demographics object exists
+  const getOrCreatePlatformDemo = (
+    prev: CreatorProfile,
+    platformKey: string
+  ): PlatformDemographicsData => {
+    if (prev.demographics.platformDemographics?.[platformKey]) {
+      return prev.demographics.platformDemographics[platformKey];
+    }
+    return {
+      ageGroups: prev.demographics.ageGroups.map((a) => ({ ...a })),
+      gender: prev.demographics.gender.map((g) => ({ ...g })),
+      locations: prev.demographics.locations.map((l) => ({ ...l })),
+      ageBadge: prev.demographics.ageBadge,
+      ageSubtitle: prev.demographics.ageSubtitle,
+      ageFooterLeft: prev.demographics.ageFooterLeft,
+      ageFooterRight: prev.demographics.ageFooterRight,
+      ageTooltipStrategy: prev.demographics.ageTooltipStrategy,
+      ageTooltipProducts: prev.demographics.ageTooltipProducts,
+      genderBadge: prev.demographics.genderBadge,
+      genderSubtitle: prev.demographics.genderSubtitle,
+      genderFooter: prev.demographics.genderFooter,
+      genderTooltipStrategy: prev.demographics.genderTooltipStrategy,
+      genderTooltipProducts: prev.demographics.genderTooltipProducts,
+      locationBadge: prev.demographics.locationBadge,
+      locationSubtitle: prev.demographics.locationSubtitle,
+      locationFooter: prev.demographics.locationFooter,
+      locationTooltipStrategy: prev.demographics.locationTooltipStrategy,
+      locationTooltipProducts: prev.demographics.locationTooltipProducts,
+    };
+  };
 
-  const updateLocationField = useCallback(
-    (index: number, field: 'name' | 'percent', value: string | number) => {
-      setDraftCreator((prev) => ({
-        ...prev,
-        demographics: {
-          ...prev.demographics,
-          locations: prev.demographics.locations.map((loc, idx) =>
-            idx === index ? { ...loc, [field]: value } : loc
+  const updateAgeGroupField = useCallback(
+    (
+      index: number,
+      field: 'range' | 'percent',
+      value: string | number,
+      platformKey = 'overall'
+    ) => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              ageGroups: prev.demographics.ageGroups.map((ag, idx) =>
+                idx === index ? { ...ag, [field]: value } : ag
+              ),
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          ageGroups: currentTarget.ageGroups.map((ag, idx) =>
+            idx === index ? { ...ag, [field]: value } : ag
           ),
-        },
-      }));
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
       setHasUnsavedChanges(true);
     },
     []
   );
+
+  const addAgeGroupItem = useCallback(
+    (range = '45+ ปี', percent = 5, platformKey = 'overall') => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              ageGroups: [...prev.demographics.ageGroups, { range, percent }],
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          ageGroups: [...currentTarget.ageGroups, { range, percent }],
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const deleteAgeGroupItem = useCallback(
+    (index: number, platformKey = 'overall') => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              ageGroups: prev.demographics.ageGroups.filter((_, idx) => idx !== index),
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          ageGroups: currentTarget.ageGroups.filter((_, idx) => idx !== index),
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const updateGenderPercent = useCallback(
+    (index: number, percent: number, platformKey = 'overall') => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              gender: prev.demographics.gender.map((g, idx) =>
+                idx === index ? { ...g, percent } : g
+              ),
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          gender: currentTarget.gender.map((g, idx) =>
+            idx === index ? { ...g, percent } : g
+          ),
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const updateGenderField = useCallback(
+    (
+      index: number,
+      field: 'label' | 'percent',
+      value: string | number,
+      platformKey = 'overall'
+    ) => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              gender: prev.demographics.gender.map((g, idx) =>
+                idx === index ? { ...g, [field]: value } : g
+              ),
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          gender: currentTarget.gender.map((g, idx) =>
+            idx === index ? { ...g, [field]: value } : g
+          ),
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const updateLocationField = useCallback(
+    (
+      index: number,
+      field: 'name' | 'percent',
+      value: string | number,
+      platformKey = 'overall'
+    ) => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              locations: prev.demographics.locations.map((loc, idx) =>
+                idx === index ? { ...loc, [field]: value } : loc
+              ),
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          locations: currentTarget.locations.map((loc, idx) =>
+            idx === index ? { ...loc, [field]: value } : loc
+          ),
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const addLocationItem = useCallback(
+    (name = 'จังหวัดอื่นๆ', percent = 2, platformKey = 'overall') => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              locations: [...prev.demographics.locations, { name, percent }],
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          locations: [...currentTarget.locations, { name, percent }],
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const deleteLocationItem = useCallback(
+    (index: number, platformKey = 'overall') => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              locations: prev.demographics.locations.filter((_, idx) => idx !== index),
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          locations: currentTarget.locations.filter((_, idx) => idx !== index),
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const updateDemographicsMeta = useCallback(
+    (
+      field: keyof Omit<CreatorProfile['demographics'], 'ageGroups' | 'gender' | 'locations' | 'platformDemographics' | 'defaultDemographicView'>,
+      value: string,
+      platformKey = 'overall'
+    ) => {
+      setDraftCreator((prev) => {
+        if (!platformKey || platformKey === 'overall') {
+          return {
+            ...prev,
+            demographics: {
+              ...prev.demographics,
+              [field]: value,
+            },
+          };
+        }
+        const currentTarget = getOrCreatePlatformDemo(prev, platformKey);
+        const updatedTarget = {
+          ...currentTarget,
+          [field]: value,
+        };
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            platformDemographics: {
+              ...(prev.demographics.platformDemographics || {}),
+              [platformKey]: updatedTarget,
+            },
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const copyDemographicsBetweenPlatforms = useCallback(
+    (fromPlatformKey: string, targetPlatformKeys: string[]) => {
+      if (!targetPlatformKeys || targetPlatformKeys.length === 0) return;
+      setDraftCreator((prev) => {
+        let sourceData: PlatformDemographicsData;
+        if (fromPlatformKey === 'overall') {
+          sourceData = {
+            ageGroups: prev.demographics.ageGroups.map((a) => ({ ...a })),
+            gender: prev.demographics.gender.map((g) => ({ ...g })),
+            locations: prev.demographics.locations.map((l) => ({ ...l })),
+            ageBadge: prev.demographics.ageBadge,
+            ageSubtitle: prev.demographics.ageSubtitle,
+            ageFooterLeft: prev.demographics.ageFooterLeft,
+            ageFooterRight: prev.demographics.ageFooterRight,
+            ageTooltipStrategy: prev.demographics.ageTooltipStrategy,
+            ageTooltipProducts: prev.demographics.ageTooltipProducts,
+            genderBadge: prev.demographics.genderBadge,
+            genderSubtitle: prev.demographics.genderSubtitle,
+            genderFooter: prev.demographics.genderFooter,
+            genderTooltipStrategy: prev.demographics.genderTooltipStrategy,
+            genderTooltipProducts: prev.demographics.genderTooltipProducts,
+            locationBadge: prev.demographics.locationBadge,
+            locationSubtitle: prev.demographics.locationSubtitle,
+            locationFooter: prev.demographics.locationFooter,
+            locationTooltipStrategy: prev.demographics.locationTooltipStrategy,
+            locationTooltipProducts: prev.demographics.locationTooltipProducts,
+          };
+        } else {
+          sourceData = getOrCreatePlatformDemo(prev, fromPlatformKey);
+        }
+
+        const newPlatformDemos = { ...(prev.demographics.platformDemographics || {}) };
+        targetPlatformKeys.forEach((tgt) => {
+          if (tgt === fromPlatformKey) return;
+          if (tgt !== 'overall') {
+            newPlatformDemos[tgt] = {
+              ageGroups: sourceData.ageGroups.map((a) => ({ ...a })),
+              gender: sourceData.gender.map((g) => ({ ...g })),
+              locations: sourceData.locations.map((l) => ({ ...l })),
+              ageBadge: sourceData.ageBadge,
+              ageSubtitle: sourceData.ageSubtitle,
+              ageFooterLeft: sourceData.ageFooterLeft,
+              ageFooterRight: sourceData.ageFooterRight,
+              ageTooltipStrategy: sourceData.ageTooltipStrategy,
+              ageTooltipProducts: sourceData.ageTooltipProducts,
+              genderBadge: sourceData.genderBadge,
+              genderSubtitle: sourceData.genderSubtitle,
+              genderFooter: sourceData.genderFooter,
+              genderTooltipStrategy: sourceData.genderTooltipStrategy,
+              genderTooltipProducts: sourceData.genderTooltipProducts,
+              locationBadge: sourceData.locationBadge,
+              locationSubtitle: sourceData.locationSubtitle,
+              locationFooter: sourceData.locationFooter,
+              locationTooltipStrategy: sourceData.locationTooltipStrategy,
+              locationTooltipProducts: sourceData.locationTooltipProducts,
+            };
+          }
+        });
+
+        const updatedRootAge = targetPlatformKeys.includes('overall')
+          ? sourceData.ageGroups.map((a) => ({ ...a }))
+          : prev.demographics.ageGroups;
+        const updatedRootGender = targetPlatformKeys.includes('overall')
+          ? sourceData.gender.map((g) => ({ ...g }))
+          : prev.demographics.gender;
+        const updatedRootLocations = targetPlatformKeys.includes('overall')
+          ? sourceData.locations.map((l) => ({ ...l }))
+          : prev.demographics.locations;
+
+        return {
+          ...prev,
+          demographics: {
+            ...prev.demographics,
+            ageGroups: updatedRootAge,
+            gender: updatedRootGender,
+            locations: updatedRootLocations,
+            platformDemographics: newPlatformDemos,
+          },
+        };
+      });
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const recalculateDemographicsWeightedAverage = useCallback(() => {
+    setDraftCreator((prev) => {
+      const weighted = calculateFollowerWeightedDemographics(prev);
+      return {
+        ...prev,
+        demographics: {
+          ...prev.demographics,
+          ageGroups: weighted.ageGroups,
+          gender: weighted.gender,
+          locations: weighted.locations,
+          ageBadge: weighted.ageBadge || prev.demographics.ageBadge,
+          ageSubtitle: weighted.ageSubtitle || prev.demographics.ageSubtitle,
+          genderBadge: weighted.genderBadge || prev.demographics.genderBadge,
+          genderSubtitle: weighted.genderSubtitle || prev.demographics.genderSubtitle,
+          locationBadge: weighted.locationBadge || prev.demographics.locationBadge,
+          locationSubtitle: weighted.locationSubtitle || prev.demographics.locationSubtitle,
+        },
+      };
+    });
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const updateDefaultDemographicView = useCallback((view: string) => {
+    setDraftCreator((prev) => ({
+      ...prev,
+      demographics: {
+        ...prev.demographics,
+        defaultDemographicView: view,
+      },
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const updateFreePerkField = useCallback(
     (perkId: string, field: 'name' | 'priceLabel', value: string) => {
@@ -335,6 +953,32 @@ export function useCreatorStudio({
     },
     []
   );
+
+  const addFreePerkItem = useCallback(
+    (name = 'บริการแถมฟรีเพิ่มเติม', priceLabel = 'ราคา 0.- (ฟรี)') => {
+      setDraftCreator((prev) => ({
+        ...prev,
+        freePerks: [
+          ...prev.freePerks,
+          {
+            id: `free-${Date.now()}`,
+            name,
+            priceLabel,
+          },
+        ],
+      }));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const deleteFreePerkItem = useCallback((perkId: string) => {
+    setDraftCreator((prev) => ({
+      ...prev,
+      freePerks: prev.freePerks.filter((pk) => pk.id !== perkId),
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const updateCustomCollabNote = useCallback(
     (index: number, field: 'title' | 'description', value: string) => {
@@ -377,6 +1021,8 @@ export function useCreatorStudio({
       isPinned?: boolean;
       topCommentUser?: string;
       topCommentText?: string;
+      topCommentLikes?: string;
+      topComments?: { user: string; text: string; likes: string }[];
     }) => {
       const cleanDriveUrl = payload.driveImageUrl?.trim() || undefined;
       const cleanDriveVideoUrl = payload.driveVideoUrl?.trim() || undefined;
@@ -388,6 +1034,28 @@ export function useCreatorStudio({
       const resolvedThumb = cleanDriveUrl
         ? resolveGoogleDriveImage(cleanDriveUrl)
         : existingItem?.thumbnailUrl || '/assets/juijui/viral-2.jpg';
+
+      let resolvedTopComments = payload.topComments
+        ? payload.topComments
+            .filter((tc) => tc.text.trim() !== '')
+            .map((tc) => ({
+              user: tc.user.trim() || '@viewer',
+              text: tc.text.trim(),
+              likes: tc.likes.trim() || '1.2K',
+            }))
+        : payload.topCommentText?.trim()
+        ? [
+            {
+              user: payload.topCommentUser?.trim() || '@viewer',
+              text: payload.topCommentText.trim(),
+              likes:
+                payload.topCommentLikes?.trim() ||
+                existingItem?.topComments?.[0]?.likes ||
+                '1.2K',
+            },
+            ...(existingItem?.topComments?.slice(1) || []),
+          ]
+        : existingItem?.topComments || [];
 
       const constructed: ViralWorkItem = {
         id: payload.id || `work-${Date.now()}`,
@@ -407,15 +1075,7 @@ export function useCreatorStudio({
         driveImageUrl: cleanDriveUrl,
         driveVideoUrl: cleanDriveVideoUrl || existingItem?.driveVideoUrl,
         tiktokUrl: payload.tiktokUrl.trim() || 'https://www.tiktok.com/@juijui.j',
-        topComments: payload.topCommentText?.trim()
-          ? [
-              {
-                user: payload.topCommentUser?.trim() || '@viewer',
-                text: payload.topCommentText.trim(),
-                likes: existingItem?.topComments?.[0]?.likes || '1.2K',
-              },
-            ]
-          : existingItem?.topComments || [],
+        topComments: resolvedTopComments,
       };
 
       const nextViralWorks = isEditing
@@ -464,7 +1124,21 @@ export function useCreatorStudio({
     [draftCreator, editingMediaItem, saveDraftChanges]
   );
 
-  // 3. COMMENTS & SOCIAL PROOF CRUD (CREATE + UPDATE + DELETE)
+  // 3. COMMENTS & SOCIAL PROOF CRUD (CREATE + UPDATE + DELETE + SUMMARY BANNER)
+  const updateProofSummaryConfig = useCallback(
+    (field: keyof ProofSummaryConfig, value: string) => {
+      setDraftCreator((prev) => ({
+        ...prev,
+        proofSummaryConfig: {
+          ...(prev.proofSummaryConfig || {}),
+          [field]: value,
+        },
+      }));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
   const upsertCommentProof = useCallback(
     async (payload: {
       id?: string;
@@ -478,9 +1152,16 @@ export function useCreatorStudio({
       clipUrl?: string;
       driveUrl?: string;
       dateLabel?: string;
+      userAvatarUrl?: string;
+      commentTime?: string;
+      replyCount?: number;
+      isPinned?: boolean;
+      isCreatorLiked?: boolean;
+      brandReply?: BrandReplyItem;
     }) => {
       const isEditing = Boolean(payload.id);
       const cleanDrive = payload.driveUrl?.trim();
+      const cleanAvatar = payload.userAvatarUrl?.trim();
       const existing = isEditing
         ? draftCreator.commentProofs.find((c) => c.id === payload.id)
         : undefined;
@@ -496,8 +1177,37 @@ export function useCreatorStudio({
         likesCount: payload.likesCount.trim() || '2.5K ไลค์',
         clipReference: payload.clipReference.trim() || `ผลงานช่อง ${draftCreator.nameTh}`,
         clipUrl: payload.clipUrl !== undefined ? payload.clipUrl.trim() : existing?.clipUrl,
-        screenshotUrl: cleanDrive ? resolveGoogleDriveImage(cleanDrive) : existing?.screenshotUrl,
+        screenshotUrl:
+          payload.driveUrl !== undefined
+            ? cleanDrive
+              ? resolveGoogleDriveImage(cleanDrive)
+              : undefined
+            : existing?.screenshotUrl,
         dateLabel: payload.dateLabel?.trim() || 'พฤษภาคม 2569',
+        userAvatarUrl:
+          payload.userAvatarUrl !== undefined
+            ? cleanAvatar
+              ? resolveGoogleDriveImage(cleanAvatar)
+              : undefined
+            : existing?.userAvatarUrl,
+        commentTime:
+          payload.commentTime !== undefined
+            ? payload.commentTime.trim() || undefined
+            : existing?.commentTime,
+        replyCount:
+          payload.replyCount !== undefined ? Number(payload.replyCount) || 0 : existing?.replyCount,
+        isPinned: payload.isPinned !== undefined ? payload.isPinned : existing?.isPinned,
+        isCreatorLiked:
+          payload.isCreatorLiked !== undefined ? payload.isCreatorLiked : existing?.isCreatorLiked,
+        brandReply:
+          payload.brandReply && payload.brandReply.content.trim()
+            ? {
+                author: payload.brandReply.author.trim() || `${draftCreator.nameTh} (${draftCreator.nameEn})`,
+                content: payload.brandReply.content.trim(),
+                time: payload.brandReply.time.trim() || '14:25',
+                readStatus: payload.brandReply.readStatus ?? true,
+              }
+            : undefined,
       };
 
       const nextComments = isEditing
@@ -776,8 +1486,11 @@ export function useCreatorStudio({
     hasUnsavedChanges,
     isSaving,
     savedNotice,
+    saveErrorNotice,
+    clearSaveErrorNotice,
     // Tab 0 (Identity & Contact) actions
     updateRootField,
+    updateSectionHeaderField,
     updateStrengthItem,
     addStrengthItem,
     deleteStrengthItem,
@@ -789,10 +1502,25 @@ export function useCreatorStudio({
     deleteAddOnItem,
     updateOverviewStat,
     updatePlatformStat,
+    updateDefaultStatsTimeframe,
+    updateOverviewTimeframeStat,
+    updatePlatformTimeframeStat,
     updateAgeGroupPercent,
+    updateAgeGroupField,
+    addAgeGroupItem,
+    deleteAgeGroupItem,
     updateGenderPercent,
+    updateGenderField,
     updateLocationField,
+    addLocationItem,
+    deleteLocationItem,
+    updateDemographicsMeta,
+    copyDemographicsBetweenPlatforms,
+    recalculateDemographicsWeightedAverage,
+    updateDefaultDemographicView,
     updateFreePerkField,
+    addFreePerkItem,
+    deleteFreePerkItem,
     updateCustomCollabNote,
     updateSupportedFormats,
     saveDraftChanges,
@@ -814,6 +1542,7 @@ export function useCreatorStudio({
     setEditingCommentItem,
     upsertCommentProof,
     deleteCommentProof,
+    updateProofSummaryConfig,
     // Tab 5 (Bookings) actions
     onUpdateBookingStatus,
     exportBookingsToCsv,

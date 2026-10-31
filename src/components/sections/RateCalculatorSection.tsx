@@ -119,14 +119,15 @@ export const RateCalculatorSection: React.FC<RateCalculatorSectionProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <p className="text-xs font-semibold text-violet-700 uppercase tracking-wider">
-                  05 · RATE CARD & PACKAGES
+                  {currentCreator.sectionHeaders?.rateCardBadge || '05 · RATE CARD & PACKAGES'}
                 </p>
               </div>
               <h2 className="text-2xl sm:text-4xl font-bold text-[#1E1B4B] mt-1">
-                แพ็กเกจและเรทราคา
+                {currentCreator.sectionHeaders?.rateCardTitle || 'แพ็กเกจและเรทราคา'}
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                เปรียบเทียบสโคปงาน คำนวณงบประมาณรวมแบบสด และกดออกใบเสนอราคาได้ทันที
+                {currentCreator.sectionHeaders?.rateCardSubtitle ||
+                  'เปรียบเทียบสโคปงาน คำนวณงบประมาณรวมแบบสด และกดออกใบเสนอราคาได้ทันที'}
               </p>
             </motion.div>
 
@@ -174,6 +175,7 @@ export const RateCalculatorSection: React.FC<RateCalculatorSectionProps> = ({
             >
               <PackageMatrixTable
                 packages={currentCreator.packages}
+                freePerks={currentCreator.freePerks}
                 selectedPackageId={selectedPackageId}
                 onSelectPackageId={onSelectPackageId}
                 onOpenBookingForPackage={onOpenBookingForPackage}

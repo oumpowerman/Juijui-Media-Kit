@@ -1,3 +1,23 @@
+export type StatsTimeframe = '28d' | '60d' | 'lifetime';
+
+export interface TimeframePlatformMetrics {
+  views: string;
+  likes: string;
+  comments: string;
+  shares: string;
+  er: string;
+  erNum: number;
+}
+
+export interface TimeframeOverviewMetrics {
+  totalViews: string;
+  totalEr: string;
+  avgViewsPerContent: string;
+  monthlyReach: string;
+  monthlyLikes: string;
+  periodBadgeLabel?: string;
+}
+
 export interface PlatformStat {
   id: 'tiktok' | 'facebook' | 'instagram' | 'youtube';
   name: string;
@@ -12,6 +32,7 @@ export interface PlatformStat {
   er: string;
   erNum: number;
   accentColor: string;
+  timeframes?: Record<StatsTimeframe, TimeframePlatformMetrics>;
 }
 
 export interface ViralWorkItem {
@@ -78,6 +99,8 @@ export interface RatePackage {
   maxDuration: string;
   platforms: string;
   totalPosts: string;
+  platformScopeLabel?: string;
+  distributionSubLabel?: string;
   bestFor: string;
   costEfficiency: string;
   features: string[];
@@ -148,6 +171,77 @@ export interface BrandShowcaseConfig {
   referenceSlideUrl?: string;
 }
 
+export interface ProofSummaryConfig {
+  ratingScore?: string;
+  ratingLabel?: string;
+  ratingSubtitle?: string;
+  sentimentPercent?: string;
+  sentimentTitle?: string;
+  sentimentSubtitle?: string;
+  verifiedTitle?: string;
+  verifiedSubtitle?: string;
+}
+
+export interface SectionHeadersConfig {
+  analyticsBadge?: string;
+  analyticsTitle?: string;
+  analyticsSubtitle?: string;
+  viralBadge?: string;
+  viralTitle?: string;
+  viralSubtitle?: string;
+  proofBadge?: string;
+  proofTitle?: string;
+  proofSubtitle?: string;
+  rateCardBadge?: string;
+  rateCardTitle?: string;
+  rateCardSubtitle?: string;
+  contactBadge?: string;
+  contactTitle?: string;
+  contactSubtitle?: string;
+}
+
+export interface DemographicAgeGroup {
+  range: string;
+  percent: number;
+}
+
+export interface DemographicGender {
+  label: string;
+  percent: number;
+}
+
+export interface DemographicLocation {
+  name: string;
+  percent: number;
+}
+
+export interface PlatformDemographicsData {
+  ageGroups: DemographicAgeGroup[];
+  gender: DemographicGender[];
+  locations: DemographicLocation[];
+  ageBadge?: string;
+  ageSubtitle?: string;
+  ageFooterLeft?: string;
+  ageFooterRight?: string;
+  ageTooltipStrategy?: string;
+  ageTooltipProducts?: string;
+  genderBadge?: string;
+  genderSubtitle?: string;
+  genderFooter?: string;
+  genderTooltipStrategy?: string;
+  genderTooltipProducts?: string;
+  locationBadge?: string;
+  locationSubtitle?: string;
+  locationFooter?: string;
+  locationTooltipStrategy?: string;
+  locationTooltipProducts?: string;
+}
+
+export interface CreatorDemographics extends PlatformDemographicsData {
+  platformDemographics?: Record<string, PlatformDemographicsData>;
+  defaultDemographicView?: 'overall' | 'tiktok' | 'facebook' | 'instagram' | 'youtube' | string;
+}
+
 export interface CreatorProfile {
   id: string;
   nameTh: string;
@@ -166,6 +260,11 @@ export interface CreatorProfile {
   faviconShape?: 'circle' | 'rounded' | 'square';
   browserTabTitle?: string;
   updatedLabel: string;
+  heroTimeframeBadge?: string;
+  defaultStatsTimeframe?: StatsTimeframe;
+  overviewTimeframes?: Record<StatsTimeframe, TimeframeOverviewMetrics>;
+  sectionHeaders?: SectionHeadersConfig;
+  proofSummaryConfig?: ProofSummaryConfig;
   overview: {
     totalFollowers: string;
     totalViews60d: string;
@@ -182,11 +281,7 @@ export interface CreatorProfile {
   moodAndTone: string[];
   supportedFormats: string[];
   platforms: PlatformStat[];
-  demographics: {
-    ageGroups: { range: string; percent: number }[];
-    gender: { label: string; percent: number }[];
-    locations: { name: string; percent: number }[];
-  };
+  demographics: CreatorDemographics;
   viralWorks: ViralWorkItem[];
   commentProofs: CommentProofItem[];
   packages: RatePackage[];

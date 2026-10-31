@@ -10,7 +10,12 @@ import {
   ExternalLink,
   TrendingUp,
 } from 'lucide-react';
-import { PlatformStat } from '../../../data/creatorData';
+import {
+  PlatformStat,
+  StatsTimeframe,
+  STATS_TIMEFRAME_OPTIONS,
+  resolvePlatformMetricsForTimeframe,
+} from '../../../data/creatorData';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { PlatformBrandIcon } from '../../ui/PlatformBrandIcon';
 import {
@@ -21,6 +26,7 @@ import {
 
 interface PlatformPerformanceCardProps {
   platform: PlatformStat;
+  activeStatsTimeframe: StatsTimeframe;
   isActive: boolean;
   isDimmed: boolean;
   onSelect: () => void;
@@ -29,8 +35,12 @@ interface PlatformPerformanceCardProps {
 export const PlatformPerformanceCard = forwardRef<
   HTMLDivElement,
   PlatformPerformanceCardProps
->(({ platform: plat, isActive, isDimmed, onSelect }, ref) => {
+>(({ platform: plat, activeStatsTimeframe, isActive, isDimmed, onSelect }, ref) => {
   const theme = PLATFORM_THEMES[plat.id] || PLATFORM_THEMES.tiktok;
+  const tfMetrics = resolvePlatformMetricsForTimeframe(plat, activeStatsTimeframe);
+  const tfOption =
+    STATS_TIMEFRAME_OPTIONS.find((o) => o.id === activeStatsTimeframe) ||
+    STATS_TIMEFRAME_OPTIONS[1];
 
   return (
     <motion.div
@@ -173,47 +183,47 @@ export const PlatformPerformanceCard = forwardRef<
                 <span>Followers</span>
               </dt>
               <dd className="font-bold text-slate-900 font-mono-num text-sm">
-                <AnimatedCounter value={plat.followers} duration={1.6} />
+                <AnimatedCounter value={plat.followers} duration={1.5} />
               </dd>
             </div>
 
             <div className="flex items-center justify-between py-1.5 px-2 rounded-xl hover:bg-slate-50/80 transition-colors">
               <dt className="flex items-center gap-2 text-slate-600 font-medium">
                 <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span>Views (60d)</span>
+                <span>{tfOption.cardViewsLabel}</span>
               </dt>
               <dd className="font-bold text-slate-900 font-mono-num text-sm">
-                <AnimatedCounter value={plat.views} duration={1.65} />
+                <AnimatedCounter value={tfMetrics.views} duration={1.45} />
               </dd>
             </div>
 
             <div className="flex items-center justify-between py-1 px-2 rounded-xl hover:bg-slate-50/80 transition-colors">
               <dt className="flex items-center gap-2 text-slate-600 font-medium">
                 <Heart className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-                <span>Likes</span>
+                <span>Likes ({tfOption.shortBadge})</span>
               </dt>
               <dd className="font-semibold text-slate-800 font-mono-num">
-                <AnimatedCounter value={plat.likes} duration={1.55} />
+                <AnimatedCounter value={tfMetrics.likes} duration={1.4} />
               </dd>
             </div>
 
             <div className="flex items-center justify-between py-1 px-2 rounded-xl hover:bg-slate-50/80 transition-colors">
               <dt className="flex items-center gap-2 text-slate-600 font-medium">
                 <MessageCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                <span>Comments</span>
+                <span>Comments ({tfOption.shortBadge})</span>
               </dt>
               <dd className="font-semibold text-slate-800 font-mono-num">
-                <AnimatedCounter value={plat.comments} duration={1.5} />
+                <AnimatedCounter value={tfMetrics.comments} duration={1.4} />
               </dd>
             </div>
 
             <div className="flex items-center justify-between py-1 px-2 rounded-xl hover:bg-slate-50/80 transition-colors">
               <dt className="flex items-center gap-2 text-slate-600 font-medium">
                 <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>Shares</span>
+                <span>Shares ({tfOption.shortBadge})</span>
               </dt>
               <dd className="font-semibold text-slate-800 font-mono-num">
-                <AnimatedCounter value={plat.shares} duration={1.5} />
+                <AnimatedCounter value={tfMetrics.shares} duration={1.4} />
               </dd>
             </div>
           </dl>
@@ -239,7 +249,7 @@ export const PlatformPerformanceCard = forwardRef<
             </div>
             <div className="text-left min-w-0">
               <p className="text-xs font-bold text-slate-800 truncate">
-                Engagement Rate
+                Engagement Rate ({tfOption.shortBadge})
               </p>
               <p className="text-[10px] text-slate-500 truncate">
                 เฉลี่ยต่อคอนเทนต์
@@ -247,7 +257,7 @@ export const PlatformPerformanceCard = forwardRef<
             </div>
           </div>
           <p className="text-2xl font-bold text-[#1E1B4B] font-mono-num shrink-0 ml-2">
-            <AnimatedCounter value={plat.er} duration={1.7} />
+            <AnimatedCounter value={tfMetrics.er} duration={1.5} />
           </p>
         </div>
       </div>

@@ -45,6 +45,8 @@ interface ViralMediaTabProps {
     isPinned?: boolean;
     topCommentUser?: string;
     topCommentText?: string;
+    topCommentLikes?: string;
+    topComments?: { user: string; text: string; likes: string }[];
   }) => Promise<void>;
   onTogglePinViralWork: (workId: string) => Promise<void>;
   onDeleteViralWork: (workId: string) => Promise<void>;
@@ -75,8 +77,9 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
   const [driveVideoUrl, setDriveVideoUrl] = useState('');
   const [showVideoTest, setShowVideoTest] = useState(false);
   const [isPinned, setIsPinned] = useState(true);
-  const [topCommentUser, setTopCommentUser] = useState('@fanclub_juijui');
-  const [topCommentText, setTopCommentText] = useState('');
+  const [topCommentsList, setTopCommentsList] = useState<
+    { user: string; text: string; likes: string }[]
+  >([{ user: '@fanclub_juijui', text: '', likes: '1.2K' }]);
   const [searchQuery, setSearchQuery] = useState('');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
 
@@ -97,8 +100,17 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
       setDriveVideoUrl(editingMediaItem.driveVideoUrl || '');
       setShowVideoTest(false);
       setIsPinned(Boolean(editingMediaItem.isPinned));
-      setTopCommentUser(editingMediaItem.topComments?.[0]?.user || '@fanclub_juijui');
-      setTopCommentText(editingMediaItem.topComments?.[0]?.text || '');
+      if (editingMediaItem.topComments && editingMediaItem.topComments.length > 0) {
+        setTopCommentsList(
+          editingMediaItem.topComments.map((c) => ({
+            user: c.user || '@fanclub_juijui',
+            text: c.text || '',
+            likes: c.likes || '1.2K',
+          }))
+        );
+      } else {
+        setTopCommentsList([{ user: '@fanclub_juijui', text: '', likes: '1.2K' }]);
+      }
     } else {
       setTitle('');
       setSubtitle('');
@@ -115,14 +127,21 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
       setDriveVideoUrl('');
       setShowVideoTest(false);
       setIsPinned(true);
-      setTopCommentUser('@fanclub_juijui');
-      setTopCommentText('');
+      setTopCommentsList([{ user: '@fanclub_juijui', text: '', likes: '1.2K' }]);
     }
   }, [editingMediaItem]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    const cleanedTopComments = topCommentsList
+      .filter((c) => c.text.trim() !== '')
+      .map((c) => ({
+        user: c.user.trim() || '@fanclub_juijui',
+        text: c.text.trim(),
+        likes: c.likes.trim() || '1.2K',
+      }));
 
     await onUpsertViralWork({
       id: editingMediaItem?.id,
@@ -140,8 +159,7 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
       driveImageUrl,
       driveVideoUrl,
       isPinned,
-      topCommentUser,
-      topCommentText,
+      topComments: cleanedTopComments,
     });
   };
 
@@ -468,30 +486,102 @@ export const ViralMediaTab: React.FC<ViralMediaTabProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              ชื่อผู้คอมเมนต์
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-violet-700" />
+              <span>คอมเมนต์ท็อปฮิตใต้คลิปนี้ ({topCommentsList.length} รายการ)</span>
             </label>
-            <input
-              type="text"
-              value={topCommentUser}
-              onChange={(e) => setTopCommentUser(e.target.value)}
-              placeholder="@fanclub"
-              className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50/70 focus:bg-white border border-slate-300"
-            />
+            <button
+              type="button"
+              onClick={() =>
+                setTopCommentsList((prev) => [
+                  ...prev,
+                  { user: '@fanclub_juijui', text: '', likes: '1.2K' },
+                ])
+              }
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 text-[11px] font-semibold cursor-pointer"
+            >
+              <Plus className="w-3 h-3" />
+              <span>เพิ่มคอมเมนต์ใต้คลิป</span>
+            </button>
           </div>
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              คอมเมนต์ท็อปฮิตใต้คลิปนี้ (ถ้ามี)
-            </label>
-            <input
-              type="text"
-              value={topCommentText}
-              onChange={(e) => setTopCommentText(e.target.value)}
-              placeholder="เช่น ดูคลิปนี้แล้วอยากกดสั่งตามเลย ขำตั้งแต่ต้นจนจบ!"
-              className="w-full px-3 py-2 text-xs rounded-lg bg-slate-50/70 focus:bg-white border border-slate-300"
-            />
+
+          <div className="space-y-2">
+            {topCommentsList.map((cm, idx) => (
+              <div
+                key={idx}
+                className="p-2.5 rounded-lg bg-white border border-slate-200 space-y-2"
+              >
+                <div className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-5">
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                      ชื่อผู้คอมเมนต์ #{idx + 1}
+                    </label>
+                    <input
+                      type="text"
+                      value={cm.user}
+                      onChange={(e) =>
+                        setTopCommentsList((prev) =>
+                          prev.map((item, i) =>
+                            i === idx ? { ...item, user: e.target.value } : item
+                          )
+                        )
+                      }
+                      placeholder="@fanclub"
+                      className="w-full px-2.5 py-1 text-xs rounded-lg bg-slate-50/70 focus:bg-white border border-slate-300"
+                    />
+                  </div>
+                  <div className="col-span-5">
+                    <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">
+                      ยอดไลค์คอมเมนต์
+                    </label>
+                    <input
+                      type="text"
+                      value={cm.likes}
+                      onChange={(e) =>
+                        setTopCommentsList((prev) =>
+                          prev.map((item, i) =>
+                            i === idx ? { ...item, likes: e.target.value } : item
+                          )
+                        )
+                      }
+                      placeholder="เช่น 1.2K หรือ 4,500"
+                      className="w-full px-2.5 py-1 text-xs font-mono-num rounded-lg bg-slate-50/70 focus:bg-white border border-slate-300"
+                    />
+                  </div>
+                  <div className="col-span-2 flex justify-end pt-3.5">
+                    {topCommentsList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTopCommentsList((prev) => prev.filter((_, i) => i !== idx))
+                        }
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded cursor-pointer"
+                        title="ลบคอมเมนต์นี้"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    value={cm.text}
+                    onChange={(e) =>
+                      setTopCommentsList((prev) =>
+                        prev.map((item, i) =>
+                          i === idx ? { ...item, text: e.target.value } : item
+                        )
+                      )
+                    }
+                    placeholder="เช่น ดูคลิปนี้แล้วอยากกดสั่งตามเลย ขำตั้งแต่ต้นจนจบ!"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-slate-50/70 focus:bg-white border border-slate-300"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

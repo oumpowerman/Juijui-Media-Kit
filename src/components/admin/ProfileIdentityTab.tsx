@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import {
   CreatorProfile,
+  SectionHeadersConfig,
   resolveGoogleDriveImage,
 } from '../../data/creatorData';
 import {
@@ -32,6 +33,10 @@ export interface ProfileIdentityTabProps {
   onUpdateRootField: <K extends keyof CreatorProfile>(
     field: K,
     value: CreatorProfile[K]
+  ) => void;
+  onUpdateSectionHeaderField: (
+    field: keyof SectionHeadersConfig,
+    value: string
   ) => void;
   onUpdateStrengthItem: (
     index: number,
@@ -58,6 +63,7 @@ export type IdentitySectionFilter =
 export const ProfileIdentityTab: React.FC<ProfileIdentityTabProps> = ({
   draftCreator,
   onUpdateRootField,
+  onUpdateSectionHeaderField,
   onUpdateStrengthItem,
   onAddStrengthItem,
   onDeleteStrengthItem,
@@ -125,7 +131,7 @@ export const ProfileIdentityTab: React.FC<ProfileIdentityTabProps> = ({
     icon: React.FC<{ className?: string }>;
   }[] = [
     { id: 'all', label: 'แสดงทั้งหมด', icon: Layers },
-    { id: 'hero', label: '1. ข้อมูลหลัก & คำคม', icon: Sparkles },
+    { id: 'hero', label: '1. ข้อมูลหลัก & หัวข้อหน้าเว็บ', icon: Sparkles },
     { id: 'media', label: '2. รูปโปรไฟล์ & ไฟล์ PDF', icon: ImageIcon },
     { id: 'favicon', label: '3. ไอคอน & ชื่อแท็บเว็บ (Favicon)', icon: Monitor },
     {
@@ -171,6 +177,7 @@ export const ProfileIdentityTab: React.FC<ProfileIdentityTabProps> = ({
         <IdentityHeroSection
           draftCreator={draftCreator}
           onUpdateRootField={onUpdateRootField}
+          onUpdateSectionHeaderField={onUpdateSectionHeaderField}
         />
       )}
 

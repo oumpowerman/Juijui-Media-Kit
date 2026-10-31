@@ -58,12 +58,17 @@ export const ContactCollaborationSection: React.FC<ContactCollaborationSectionPr
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="text-xs font-semibold text-violet-700">06. CONTACT & COLLABORATION</p>
+                <p className="text-xs font-semibold text-violet-700">
+                  {currentCreator.sectionHeaders?.contactBadge ||
+                    '06. CONTACT & COLLABORATION'}
+                </p>
                 <h2 className="text-2xl sm:text-4xl font-bold text-[#1E1B4B] mt-1">
-                  มาร่วมงานกับพวกเรา!
+                  {currentCreator.sectionHeaders?.contactTitle ||
+                    'มาร่วมงานกับพวกเรา!'}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                  ติดต่องาน สปอนเซอร์ หรือคอลแลปได้โดยตรงผ่าน LINE และ Email
+                  {currentCreator.sectionHeaders?.contactSubtitle ||
+                    'ติดต่องาน สปอนเซอร์ หรือคอลแลปได้โดยตรงผ่าน LINE และ Email'}
                 </p>
               </div>
               {(onOpenAdminContact || onOpenAdmin) && (

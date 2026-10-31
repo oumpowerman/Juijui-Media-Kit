@@ -16,8 +16,15 @@ import {
   Info,
   Lightbulb,
   ShoppingBag,
+  Globe,
 } from 'lucide-react';
-import { CreatorProfile } from '../../../data/creatorData';
+import {
+  CreatorProfile,
+  PlatformStat,
+  resolveDemographicsForView,
+  PlatformDemographicsData,
+} from '../../../data/creatorData';
+import { PlatformBrandIcon } from '../../ui/PlatformBrandIcon';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import {
   EASE_OUT_EXPO,
@@ -29,6 +36,8 @@ import {
 
 interface AudienceDemographicsCardProps {
   demographics: CreatorProfile['demographics'];
+  platforms?: PlatformStat[];
+  creator?: CreatorProfile;
   demographicsParallaxY: MotionValue<number>;
 }
 
@@ -44,11 +53,31 @@ const AMBIENT_PARTICLES = [
 
 export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> = ({
   demographics,
+  platforms,
+  creator,
   demographicsParallaxY,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [selectedPlatformView, setSelectedPlatformView] = useState<string>(
+    demographics.defaultDemographicView || 'overall'
+  );
   const [activeTooltip, setActiveTooltip] = useState<'age' | 'gender' | 'location' | null>(
     null
+  );
+
+  const availablePlatforms: PlatformStat[] =
+    platforms ||
+    creator?.platforms || [
+      { id: 'tiktok', name: 'TikTok', followers: '660.2K' } as PlatformStat,
+      { id: 'facebook', name: 'Facebook', followers: '130K' } as PlatformStat,
+      { id: 'instagram', name: 'Instagram', followers: '31.9K' } as PlatformStat,
+      { id: 'youtube', name: 'YouTube', followers: '157K' } as PlatformStat,
+    ];
+
+  // Resolve demographic figures for active view (overall weighted average or single platform)
+  const activeDemo: PlatformDemographicsData = resolveDemographicsForView(
+    creator || ({ platforms: availablePlatforms, demographics } as any),
+    selectedPlatformView
   );
 
   // 3D Tilt Coordinates & Smooth Springs
@@ -85,6 +114,49 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
     mouseY.set(0.5);
     setActiveTooltip(null);
   };
+
+  // Compute dynamic fallbacks for badges & notes using activeDemo
+  const topLocation = (activeDemo.locations || [])[0];
+  const defaultLocShort = topLocation
+    ? topLocation.name.includes('กรุงเทพ') || topLocation.name.toUpperCase().includes('BKK')
+      ? `BKK ${topLocation.percent}%`
+      : `${topLocation.name} ${topLocation.percent}%`
+    : 'BKK 80.9%';
+
+  const ageBadgeText = activeDemo.ageBadge?.trim() || '76% วัยรุ่น';
+  const ageSubtitleText = activeDemo.ageSubtitle?.trim() || 'Gen Z & วัยทำงาน';
+  const ageFooterLeftText = activeDemo.ageFooterLeft?.trim() || 'กลุ่มหลัก: 18–34 ปี';
+  const ageFooterRightText = activeDemo.ageFooterRight?.trim() || 'มีกำลังซื้อสูง';
+  const ageStrategyText =
+    activeDemo.ageTooltipStrategy?.trim() ||
+    'เปิดคลิปด้วยคอมเมดี้/ชาเลนจ์ 3 วิแรก แล้ว Tie-in สินค้าให้ดูเป็นของใช้ในชีวิตประจำวันแบบเพื่อนซี้';
+  const ageProductsText =
+    activeDemo.ageTooltipProducts?.trim() ||
+    'สกินแคร์ & บิวตี้, แฟชั่นสตรีท, แกดเจ็ต/หูฟังไอที, ของกินเล่น/เครื่องดื่ม และคาเฟ่ท่องเที่ยว';
+
+  const genderBadgeText = activeDemo.genderBadge?.trim() || 'สมดุลคู่';
+  const genderSubtitleText = activeDemo.genderSubtitle?.trim() || 'เข้าถึงทั้งชายและหญิง';
+  const genderFooterText =
+    activeDemo.genderFooter?.trim() || 'เหมาะสำหรับ: สินค้าไลฟ์สไตล์ & คอนซูเมอร์';
+  const genderStrategyText =
+    activeDemo.genderTooltipStrategy?.trim() ||
+    'ใช้เคมีคู่หูชายหญิงเล่าเรื่อง แฟนซื้อให้ หรือเพื่อนป้ายยากัน ทำให้เข้าถึงและดึงคอมเมนต์จากทั้งสองเพศได้สูง';
+  const genderProductsText =
+    activeDemo.genderTooltipProducts?.trim() ||
+    'สินค้า Unisex, อุปกรณ์เกมมิ่ง/ไอที, เสื้อผ้าสตรีท, ของขวัญวันสำคัญ, น้ำหอม และประกัน/การเงินคนรุ่นใหม่';
+
+  const locationBadgeText = activeDemo.locationBadge?.trim() || defaultLocShort;
+  const locationSubtitleText =
+    activeDemo.locationSubtitle?.trim() || 'กรุงเทพฯ & หัวเมืองหลัก';
+  const locationFooterText =
+    activeDemo.locationFooter?.trim() ||
+    'เน้นกลุ่มในเมือง: กำลังซื้อและสั่งซื้อออนไลน์สูง';
+  const locationStrategyText =
+    activeDemo.locationTooltipStrategy?.trim() ||
+    'ฐานคนเมืองกว่า 80% คุ้นเคยกับการกดสั่งซื้อผ่าน TikTok Shop และ Delivery ทันทีหลังดูคลิป ควรแปะโค้ดส่วนลดหรือปักตะกร้าส่งด่วน';
+  const locationProductsText =
+    activeDemo.locationTooltipProducts?.trim() ||
+    'สินค้า E-Commerce ส่งด่วน 1-2 วัน, ร้านอาหาร & บุฟเฟต์ในห้าง, แอปพลิเคชัน & แพลตฟอร์มออนไลน์, อีเวนต์และตั๋วคอนเสิร์ต';
 
   return (
     <div style={{ perspective: 1200 }} className="relative">
@@ -164,6 +236,66 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
           </div>
         </div>
 
+        {/* Interactive Platform Filter Tabs Bar (Right Aligned, Compact & Responsive) */}
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-2xl bg-slate-100/85 border border-slate-200/90 mb-6">
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 pl-1.5 sm:pl-2 shrink-0">
+            <span>มุมมองที่แสดง:</span>
+            <span className="font-bold text-violet-900 bg-white/80 px-2 py-0.5 rounded-md border border-violet-100/90">
+              {selectedPlatformView === 'overall'
+                ? 'เฉลี่ยรวม 4 ช่องทาง'
+                : `เฉพาะช่องทาง ${
+                    availablePlatforms.find((p) => p.id === selectedPlatformView)?.name ||
+                    selectedPlatformView.toUpperCase()
+                  }`}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-1.5 ml-auto">
+            {/* Overall Tab */}
+            <button
+              type="button"
+              onClick={() => setSelectedPlatformView('overall')}
+              className={`relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                selectedPlatformView === 'overall'
+                  ? 'bg-white text-violet-950 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5 text-violet-600 shrink-0" />
+              <span>ภาพรวมทั้งหมด</span>
+            </button>
+
+            {/* Individual Platform Tabs */}
+            {availablePlatforms.map((plat) => {
+              const isSelected = selectedPlatformView === plat.id;
+              return (
+                <button
+                  key={plat.id}
+                  type="button"
+                  onClick={() => setSelectedPlatformView(plat.id)}
+                  className={`relative inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-white text-slate-900 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                  }`}
+                >
+                  <PlatformBrandIcon platform={plat.id} size="xs" />
+                  <span>{plat.name}</span>
+                  <span
+                    className={`hidden xl:inline-block text-[10px] px-1.5 py-0.2 rounded-md font-mono-num font-semibold ${
+                      isSelected
+                        ? 'bg-slate-100 text-slate-900'
+                        : 'bg-slate-200/70 text-slate-600'
+                    }`}
+                  >
+                    {plat.followers}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 3 Main Data Columns with 3D Interactive Marketing Tooltips */}
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-7 lg:gap-8 2xl:gap-10">
           {/* Column 1: Age Distribution */}
@@ -212,20 +344,20 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                             >
                               <div className="flex items-center gap-1.5 text-xs font-bold text-violet-300 pb-2 border-b border-white/10">
                                 <Lightbulb className="w-3.5 h-3.5 text-amber-300" />
-                                <span>คำแนะนำกลยุทธ์: Gen Z & วัยทำงาน</span>
+                                <span>คำแนะนำกลยุทธ์: {ageSubtitleText}</span>
                               </div>
                               <div className="mt-2.5 space-y-2 text-[11px] leading-relaxed text-slate-300">
                                 <p>
                                   <strong className="text-white font-semibold">
                                     💡 กลยุทธ์การตลาด:
                                   </strong>{' '}
-                                  เปิดคลิปด้วยคอมเมดี้/ชาเลนจ์ 3 วิแรก แล้ว Tie-in สินค้าให้ดูเป็นของใช้ในชีวิตประจำวันแบบเพื่อนซี้
+                                  {ageStrategyText}
                                 </p>
                                 <p>
                                   <strong className="text-white font-semibold">
                                     🛍️ สินค้าปิดการขายง่าย:
                                   </strong>{' '}
-                                  สกินแคร์ & บิวตี้, แฟชั่นสตรีท, แกดเจ็ต/หูฟังไอที, ของกินเล่น/เครื่องดื่ม และคาเฟ่ท่องเที่ยว
+                                  {ageProductsText}
                                 </p>
                               </div>
                             </motion.div>
@@ -233,18 +365,18 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                         </AnimatePresence>
                       </div>
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate">Gen Z & วัยทำงาน</p>
+                    <p className="text-[11px] text-slate-500 truncate">{ageSubtitleText}</p>
                   </div>
                 </div>
 
                 <span className="px-2 py-0.5 rounded-lg bg-violet-100/80 text-violet-800 text-[10px] font-bold shrink-0">
-                  76% วัยรุ่น
+                  {ageBadgeText}
                 </span>
               </div>
 
               <div className="space-y-3 mt-4">
-                {demographics.ageGroups.map((age, i) => (
-                  <div key={age.range} className="space-y-1 group/bar">
+                {(activeDemo.ageGroups || []).map((age, i) => (
+                  <div key={`${age.range}-${i}`} className="space-y-1 group/bar">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700 group-hover/bar:text-violet-700 transition-colors">
                         {age.range}
@@ -284,8 +416,8 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
-              <span>กลุ่มหลัก: 18–34 ปี</span>
-              <span className="font-bold text-violet-700">มีกำลังซื้อสูง</span>
+              <span>{ageFooterLeftText}</span>
+              <span className="font-bold text-violet-700">{ageFooterRightText}</span>
             </div>
           </motion.div>
 
@@ -336,20 +468,20 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                             >
                               <div className="flex items-center gap-1.5 text-xs font-bold text-pink-300 pb-2 border-b border-white/10">
                                 <Lightbulb className="w-3.5 h-3.5 text-amber-300" />
-                                <span>คำแนะนำกลยุทธ์: สัดส่วนชาย-หญิง</span>
+                                <span>คำแนะนำกลยุทธ์: {genderSubtitleText}</span>
                               </div>
                               <div className="mt-2.5 space-y-2 text-[11px] leading-relaxed text-slate-300">
                                 <p>
                                   <strong className="text-white font-semibold">
                                     💡 กลยุทธ์การตลาด:
                                   </strong>{' '}
-                                  ใช้เคมีคู่หูชายหญิงเล่าเรื่อง แฟนซื้อให้ หรือเพื่อนป้ายยากัน ทำให้เข้าถึงและดึงคอมเมนต์จากทั้งสองเพศได้สูง
+                                  {genderStrategyText}
                                 </p>
                                 <p>
                                   <strong className="text-white font-semibold">
                                     🛍️ สินค้าปิดการขายง่าย:
                                   </strong>{' '}
-                                  สินค้า Unisex, อุปกรณ์เกมมิ่ง/ไอที, เสื้อผ้าสตรีท, ของขวัญวันสำคัญ, น้ำหอม และประกัน/การเงินคนรุ่นใหม่
+                                  {genderProductsText}
                                 </p>
                               </div>
                             </motion.div>
@@ -357,19 +489,19 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                         </AnimatePresence>
                       </div>
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate">เข้าถึงทั้งชายและหญิง</p>
+                    <p className="text-[11px] text-slate-500 truncate">{genderSubtitleText}</p>
                   </div>
                 </div>
 
                 <span className="px-2 py-0.5 rounded-lg bg-pink-100/80 text-pink-800 text-[10px] font-bold shrink-0">
-                  สมดุลคู่
+                  {genderBadgeText}
                 </span>
               </div>
 
               <div className="space-y-3 mt-4">
-                {demographics.gender.map((g, idx) => (
+                {(activeDemo.gender || []).map((g, idx) => (
                   <div
-                    key={g.label}
+                    key={`${g.label}-${idx}`}
                     className="p-3 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between transition-transform hover:scale-[1.01]"
                   >
                     <div>
@@ -419,7 +551,7 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
-              <span>เหมาะสำหรับ: สินค้าไลฟ์สไตล์ & คอนซูเมอร์</span>
+              <span>{genderFooterText}</span>
             </div>
           </motion.div>
 
@@ -472,20 +604,20 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                             >
                               <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 pb-2 border-b border-white/10">
                                 <Lightbulb className="w-3.5 h-3.5 text-amber-300" />
-                                <span>คำแนะนำกลยุทธ์: ฐานคนเมือง (BKK 80.9%)</span>
+                                <span>คำแนะนำกลยุทธ์: {locationSubtitleText} ({locationBadgeText})</span>
                               </div>
                               <div className="mt-2.5 space-y-2 text-[11px] leading-relaxed text-slate-300">
                                 <p>
                                   <strong className="text-white font-semibold">
                                     💡 กลยุทธ์การตลาด:
                                   </strong>{' '}
-                                  ฐานคนเมืองกว่า 80% คุ้นเคยกับการกดสั่งซื้อผ่าน TikTok Shop และ Delivery ทันทีหลังดูคลิป ควรแปะโค้ดส่วนลดหรือปักตะกร้าส่งด่วน
+                                  {locationStrategyText}
                                 </p>
                                 <p>
                                   <strong className="text-white font-semibold">
                                     🛍️ สินค้าปิดการขายง่าย:
                                   </strong>{' '}
-                                  สินค้า E-Commerce ส่งด่วน 1-2 วัน, ร้านอาหาร & บุฟเฟต์ในห้าง, แอปพลิเคชัน & แพลตฟอร์มออนไลน์, อีเวนต์และตั๋วคอนเสิร์ต
+                                  {locationProductsText}
                                 </p>
                               </div>
                             </motion.div>
@@ -494,19 +626,19 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-500 truncate">
-                      กรุงเทพฯ & หัวเมืองหลัก
+                      {locationSubtitleText}
                     </p>
                   </div>
                 </div>
 
                 <span className="px-2 py-0.5 rounded-lg bg-indigo-100/80 text-indigo-800 text-[10px] font-bold shrink-0">
-                  BKK 80.9%
+                  {locationBadgeText}
                 </span>
               </div>
 
               <div className="space-y-3 mt-4">
-                {demographics.locations.map((loc, i) => (
-                  <div key={loc.name} className="space-y-1 group/loc">
+                {(activeDemo.locations || []).map((loc, i) => (
+                  <div key={`${loc.name}-${i}`} className="space-y-1 group/loc">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-slate-700 group-hover/loc:text-indigo-700 transition-colors">
                         {loc.name}
@@ -546,7 +678,7 @@ export const AudienceDemographicsCard: React.FC<AudienceDemographicsCardProps> =
             </div>
 
             <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-500">
-              <span>เน้นกลุ่มในเมือง: กำลังซื้อและสั่งซื้อออนไลน์สูง</span>
+              <span>{locationFooterText}</span>
             </div>
           </motion.div>
         </div>

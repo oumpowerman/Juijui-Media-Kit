@@ -10,13 +10,14 @@ import {
   Check,
   Sparkles,
 } from 'lucide-react';
-import { RatePackage } from '../../../data/creatorData';
+import { RatePackage, FreeIncludedItem } from '../../../data/creatorData';
 import { AnimatedCounter } from '../../ui/AnimatedCounter';
 import { PlatformBadgeGroup } from '../../ui/PlatformBrandIcon';
 import { fadeUpVariant, REPEAT_VIEWPORT } from '../motionVariants';
 
 export interface PackageMatrixTableProps {
   packages: RatePackage[];
+  freePerks?: FreeIncludedItem[];
   selectedPackageId: string;
   onSelectPackageId: (id: string) => void;
   onOpenBookingForPackage: (id: string) => void;
@@ -32,6 +33,7 @@ const PILLAR_SPRING = {
 
 export const PackageMatrixTable: React.FC<PackageMatrixTableProps> = ({
   packages,
+  freePerks = [],
   selectedPackageId,
   onSelectPackageId,
   onOpenBookingForPackage,
@@ -297,77 +299,51 @@ export const PackageMatrixTable: React.FC<PackageMatrixTableProps> = ({
               })}
             </tr>
 
-            {/* Row 5: Gencode & Insights */}
-            <tr className="hover:bg-slate-50/40 transition-colors">
-              <td className="py-4 px-5 font-semibold text-slate-900">
-                <span className="inline-flex items-center gap-2">
-                  <QrCode className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Gencode / Boost + Insights 30 วัน</span>
-                </span>
-              </td>
-              {packages.map((pkg) => {
-                const isSelected = pkg.id === selectedPackageId;
-                return (
-                  <td
-                    key={pkg.id}
-                    onClick={() => onSelectPackageId(isSelected ? '' : pkg.id)}
-                    className="relative py-4 px-5 text-center cursor-pointer select-none transition-colors font-semibold"
-                  >
-                    {/* Synchronized Row Pillar Background */}
-                    {isSelected && (
-                      <motion.div
-                        layoutId="matrixRowHighlight_gencode"
-                        transition={PILLAR_SPRING}
-                        className="absolute inset-0 bg-violet-50/80 border-x-2 border-violet-600/40 pointer-events-none"
-                      />
-                    )}
-                    <span
-                      className={`relative z-10 transition-colors ${
-                        isSelected ? 'text-emerald-800 font-bold' : 'text-emerald-700'
-                      }`}
-                    >
-                      ✓ ฟรี (0.-)
+            {/* Dynamic Free Perks Rows */}
+            {(freePerks.length > 0
+              ? freePerks
+              : [
+                  { id: 'free-1', name: 'Gencode / Boost + Insights 30 วัน', priceLabel: 'ฟรี (0.-)' },
+                  { id: 'free-2', name: 'สิทธิ์เชิงพาณิชย์ 6 เดือน + แก้ไข 3 ครั้ง', priceLabel: 'ฟรี (0.-)' },
+                ]
+            ).map((perk, pIdx) => {
+              const Icon = pIdx % 2 === 0 ? QrCode : ShieldCheck;
+              return (
+                <tr key={perk.id} className="hover:bg-slate-50/40 transition-colors">
+                  <td className="py-4 px-5 font-semibold text-slate-900">
+                    <span className="inline-flex items-center gap-2">
+                      <Icon className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{perk.name}</span>
                     </span>
                   </td>
-                );
-              })}
-            </tr>
-
-            {/* Row 6: Commercial Rights */}
-            <tr className="hover:bg-slate-50/40 transition-colors">
-              <td className="py-4 px-5 font-semibold text-slate-900">
-                <span className="inline-flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>สิทธิ์เชิงพาณิชย์ 6 เดือน + แก้ไข 3 ครั้ง</span>
-                </span>
-              </td>
-              {packages.map((pkg) => {
-                const isSelected = pkg.id === selectedPackageId;
-                return (
-                  <td
-                    key={pkg.id}
-                    onClick={() => onSelectPackageId(isSelected ? '' : pkg.id)}
-                    className="relative py-4 px-5 text-center cursor-pointer select-none transition-colors font-semibold"
-                  >
-                    {/* Synchronized Row Pillar Background */}
-                    {isSelected && (
-                      <motion.div
-                        layoutId="matrixRowHighlight_rights"
-                        transition={PILLAR_SPRING}
-                        className="absolute inset-0 bg-violet-50/80 border-x-2 border-violet-600/40 pointer-events-none"
-                      />
-                    )}
-                    <span
-                      className={`relative z-10 transition-colors ${
-                        isSelected ? 'text-emerald-800 font-bold' : 'text-emerald-700'
-                      }`}
-                    >
-                      ✓ ฟรี (0.-)
-                    </span>
-                  </td>
-                );
-              })}
-            </tr>
+                  {packages.map((pkg) => {
+                    const isSelected = pkg.id === selectedPackageId;
+                    return (
+                      <td
+                        key={pkg.id}
+                        onClick={() => onSelectPackageId(isSelected ? '' : pkg.id)}
+                        className="relative py-4 px-5 text-center cursor-pointer select-none transition-colors font-semibold"
+                      >
+                        {isSelected && (
+                          <motion.div
+                            layoutId={`matrixRowHighlight_perk_${perk.id}`}
+                            transition={PILLAR_SPRING}
+                            className="absolute inset-0 bg-violet-50/80 border-x-2 border-violet-600/40 pointer-events-none"
+                          />
+                        )}
+                        <span
+                          className={`relative z-10 transition-colors ${
+                            isSelected ? 'text-emerald-800 font-bold' : 'text-emerald-700'
+                          }`}
+                        >
+                          ✓ {perk.priceLabel || 'ฟรี (0.-)'}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
 
             {/* Row 7: Action Buttons (Bottom Row) */}
             <tr className="bg-slate-50/80">

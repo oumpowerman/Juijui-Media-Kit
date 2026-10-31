@@ -1,6 +1,6 @@
 {
-  "summary":  "แผนการแก้ไขปัญหาเชื่อมต่อ TikTok OAuth 2.0 และ Individual Test บน Vercel ที่ขึ้น 에러 Unexpected token '<', \"<!doctype \"... is not valid JSON โดยสร้าง Vercel Serverless API (/api/tiktok/*), ปรับปรุง vercel.json rewrites, เพิ่มระบบตรวจสอบ JSON Response ที่ปลอดภัย และเชื่อมต่อการบันทึก Token ลงทั้ง Cloud Firestore และ LocalStorage",
-  "updatedAt":  "2026-10-31T04:20:22.475326111Z",
+  "summary":  "แผนการปรับแต่งแถบแท็บฟิลเตอร์และดีไซน์ใน Section เจาะลึกกลุ่มผู้ชมและฐานแฟนคลับ (Audience DNA) ให้กระชับ ไม่ตัดบรรทัด ปรับคำเป็น 'ภาพรวมทั้งหมด' และซ่อนยอดผู้ติดตามบนหน้าจอขนาดกลาง/แคบ",
+  "updatedAt":  "2026-10-31T11:39:46.117746921Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

@@ -22,6 +22,7 @@ export const PlatformTestBox: React.FC<PlatformTestBoxProps> = ({
   onApplyToDiff,
 }) => {
   const [appliedToast, setAppliedToast] = useState(false);
+  const [previewTimeframe, setPreviewTimeframe] = useState<'28d' | '60d' | 'lifetime'>('60d');
 
   const handleApply = () => {
     if (testResult?.data && onApplyToDiff) {
@@ -116,44 +117,93 @@ export const PlatformTestBox: React.FC<PlatformTestBoxProps> = ({
           {/* Success details */}
           {testResult.success && testResult.data && (
             <div className="space-y-2 pt-1">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">ผู้ติดตามล่าสุด</div>
-                  <div className="text-xs font-bold font-mono text-emerald-700 mt-0.5">
-                    {testResult.data.followersFormatted}
-                  </div>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">ยอดวิว / Reach</div>
-                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
-                    {testResult.data.viewsFormatted || '-'}
-                  </div>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">อัตรา ER</div>
-                  <div className="text-xs font-bold font-mono text-violet-700 mt-0.5">
-                    {testResult.data.erFormatted}
-                  </div>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">ยอดไลค์ (Likes)</div>
-                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
-                    {testResult.data.likesFormatted || '-'}
-                  </div>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">คอมเมนต์ (Comments)</div>
-                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
-                    {testResult.data.commentsFormatted || '-'}
-                  </div>
-                </div>
-                <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
-                  <div className="text-[9px] font-semibold text-slate-500">ยอดแชร์ (Shares)</div>
-                  <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
-                    {testResult.data.sharesFormatted || '-'}
-                  </div>
+              {/* Timeframe Switcher inside Test Box */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-white/90 border border-emerald-200/80">
+                <span className="text-[10px] font-semibold text-slate-600">
+                  เลือกดูสถิติตามช่วงเวลาที่ดึงมา (ครบทั้ง 3 ช่วงเวลา):
+                </span>
+                <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-slate-100 border border-slate-200">
+                  {(
+                    [
+                      { id: '28d', label: '28 วัน' },
+                      { id: '60d', label: '60 วัน' },
+                      { id: 'lifetime', label: 'สะสมทั้งหมด (Lifetime)' },
+                    ] as const
+                  ).map((tf) => {
+                    const active = previewTimeframe === tf.id;
+                    return (
+                      <button
+                        key={tf.id}
+                        type="button"
+                        onClick={() => setPreviewTimeframe(tf.id)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${
+                          active
+                            ? 'bg-violet-600 text-white shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {tf.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
+              {(() => {
+                const tfData = testResult.data.timeframes?.[previewTimeframe];
+                const viewsVal = tfData?.views || testResult.data.viewsFormatted || '-';
+                const likesVal = tfData?.likes || testResult.data.likesFormatted || '-';
+                const commentsVal = tfData?.comments || testResult.data.commentsFormatted || '-';
+                const sharesVal = tfData?.shares || testResult.data.sharesFormatted || '-';
+                const erVal = tfData?.er || testResult.data.erFormatted;
+                const viewsLabel =
+                  previewTimeframe === '28d'
+                    ? 'ยอดวิว (28 วัน)'
+                    : previewTimeframe === '60d'
+                    ? 'ยอดวิว (60 วัน)'
+                    : 'ยอดวิวสะสม (Lifetime)';
+
+                return (
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                      <div className="text-[9px] font-semibold text-slate-500">ผู้ติดตามล่าสุด</div>
+                      <div className="text-xs font-bold font-mono text-emerald-700 mt-0.5">
+                        {testResult.data.followersFormatted}
+                      </div>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                      <div className="text-[9px] font-semibold text-slate-500">{viewsLabel}</div>
+                      <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                        {viewsVal}
+                      </div>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                      <div className="text-[9px] font-semibold text-slate-500">อัตรา ER</div>
+                      <div className="text-xs font-bold font-mono text-violet-700 mt-0.5">
+                        {erVal}
+                      </div>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                      <div className="text-[9px] font-semibold text-slate-500">ยอดไลค์ (Likes)</div>
+                      <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                        {likesVal}
+                      </div>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                      <div className="text-[9px] font-semibold text-slate-500">คอมเมนต์ (Comments)</div>
+                      <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                        {commentsVal}
+                      </div>
+                    </div>
+                    <div className="p-1.5 bg-white rounded-lg border border-emerald-100 shadow-2xs">
+                      <div className="text-[9px] font-semibold text-slate-500">ยอดแชร์ (Shares)</div>
+                      <div className="text-xs font-bold font-mono text-slate-800 mt-0.5 truncate">
+                        {sharesVal}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                 <span className="text-[10px] text-slate-600">
@@ -169,12 +219,12 @@ export const PlatformTestBox: React.FC<PlatformTestBoxProps> = ({
                     {appliedToast ? (
                       <>
                         <Check className="w-3 h-3" />
-                        <span>ส่งเข้า Diff แล้ว!</span>
+                        <span>ส่งเข้า Diff ครบทั้ง 3 ช่วงเวลาแล้ว!</span>
                       </>
                     ) : (
                       <>
                         <FileCheck2 className="w-3 h-3" />
-                        <span>นำค่านี้เข้า Diff เพื่อบันทึก</span>
+                        <span>นำค่านี้เข้า Diff (บันทึกครบ 3 ช่วงเวลา)</span>
                       </>
                     )}
                   </button>

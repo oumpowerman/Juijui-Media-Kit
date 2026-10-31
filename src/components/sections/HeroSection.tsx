@@ -11,8 +11,15 @@ import {
   Flame,
   Play,
   Edit3,
+  Clock,
 } from 'lucide-react';
-import { CreatorProfile } from '../../data/creatorData';
+import {
+  CreatorProfile,
+  StatsTimeframe,
+  STATS_TIMEFRAME_OPTIONS,
+  resolveOverviewForTimeframe,
+  resolvePlatformMetricsForTimeframe,
+} from '../../data/creatorData';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { PlatformBrandIcon } from '../ui/PlatformBrandIcon';
 import {
@@ -26,6 +33,8 @@ import { HeroRightSpotlightCard } from './hero/HeroRightSpotlightCard';
 interface HeroSectionProps {
   creators: CreatorProfile[];
   currentCreator: CreatorProfile;
+  activeStatsTimeframe: StatsTimeframe;
+  onSelectStatsTimeframe: (tf: StatsTimeframe) => void;
   onSelectCreatorId: (id: string) => void;
   onOpenAdmin?: () => void;
   onOpenPdf: () => void;
@@ -35,6 +44,8 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({
   creators,
   currentCreator,
+  activeStatsTimeframe,
+  onSelectStatsTimeframe,
   onSelectCreatorId,
   onOpenAdmin,
   onOpenPdf,
@@ -58,6 +69,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const rightCardParallaxY = useTransform(smoothProgress, [0, 1], [0, 28]);
   const kpiStripParallaxY = useTransform(smoothProgress, [0, 1], [0, -16]);
   const bgOrbParallaxY = useTransform(smoothProgress, [0, 1], [0, 85]);
+
+  const activeOverview = resolveOverviewForTimeframe(currentCreator, activeStatsTimeframe);
+  const activeTfOption =
+    STATS_TIMEFRAME_OPTIONS.find((o) => o.id === activeStatsTimeframe) ||
+    STATS_TIMEFRAME_OPTIONS[1];
 
   return (
     <>
@@ -182,11 +198,63 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
             <HeroRightSpotlightCard
               currentCreator={currentCreator}
+              activeStatsTimeframe={activeStatsTimeframe}
+              onSelectStatsTimeframe={onSelectStatsTimeframe}
               parallaxY={rightCardParallaxY}
               onOpenAdmin={onOpenAdmin}
               onOpenBooking={onOpenBooking}
             />
           </div>
+
+          {/* Interactive 3-Timeframe Switcher Bar above Overview KPI Strip */}
+          <motion.div
+            style={{ y: kpiStripParallaxY }}
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={REPEAT_VIEWPORT}
+            className="mt-7 2xl:mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-white/80 backdrop-blur-md border border-slate-200/80 shadow-2xs"
+          >
+            <div className="flex items-center gap-2 text-xs text-slate-700">
+              <span className="w-7 h-7 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center shrink-0">
+                <Clock className="w-3.5 h-3.5" />
+              </span>
+              <div>
+                <span className="font-bold text-slate-900">
+                  เลือกดูช่วงเวลาสถิติภาพรวม & ทั้ง 4 แพลตฟอร์ม:
+                </span>
+                <span className="text-slate-500 ml-1.5 hidden md:inline">
+                  สลับดูข้อมูลย้อนหลัง 28 วัน, 60 วัน หรือยอดสะสมทั้งหมด (Lifetime) ได้ทันที
+                </span>
+              </div>
+            </div>
+
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-100/90 border border-slate-200/80 self-start sm:self-auto">
+              {STATS_TIMEFRAME_OPTIONS.map((opt) => {
+                const isActive = activeStatsTimeframe === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => onSelectStatsTimeframe(opt.id)}
+                    className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap select-none ${
+                      isActive
+                        ? 'text-white font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="heroOverviewTimeframePill"
+                        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        className="absolute inset-0 rounded-lg bg-[#1E1B4B] shadow-xs -z-0"
+                      />
+                    )}
+                    <span className="relative z-10">{opt.labelTh}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
 
           {/* Full-Width 4-Column KPI Strip Below Hero Split with Icons & Count-Up Numbers */}
           <motion.div
@@ -195,11 +263,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             initial="hidden"
             whileInView="visible"
             viewport={REPEAT_VIEWPORT}
-            className="mt-6 2xl:mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4 2xl:gap-6"
+            className="mt-3.5 grid grid-cols-2 lg:grid-cols-4 gap-4 2xl:gap-6"
           >
             {(() => {
               const tiktokPlat = currentCreator.platforms.find((p) => p.id === 'tiktok');
-              const tiktokErText = tiktokPlat?.er ? `TikTok สูงสุด ${tiktokPlat.er}` : 'TikTok สูงสุด 8.01%';
+              const tiktokMetrics = tiktokPlat
+                ? resolvePlatformMetricsForTimeframe(tiktokPlat, activeStatsTimeframe)
+                : null;
+              const tiktokErText = tiktokMetrics?.er
+                ? `TikTok สูงสุด ${tiktokMetrics.er}`
+                : 'TikTok สูงสุด 8.01%';
+              const reachSubLabel =
+                activeStatsTimeframe === 'lifetime'
+                  ? `Reach สะสม ${activeOverview.monthlyReach}`
+                  : `Reach ${activeOverview.monthlyReach} (${activeTfOption.shortBadge})`;
+              const likesSubLabel =
+                activeStatsTimeframe === 'lifetime'
+                  ? `Likes สะสม ${activeOverview.monthlyLikes}`
+                  : `Likes ${activeOverview.monthlyLikes} (${activeTfOption.shortBadge})`;
+
               return [
                 {
                   icon: Users,
@@ -213,17 +295,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 {
                   icon: Eye,
                   iconBg: 'bg-indigo-100 text-indigo-700',
-                  label: 'ยอดวิวรวม 60 วัน (Total Views)',
-                  value: currentCreator.overview.totalViews60d,
-                  sub: `Reach ${currentCreator.overview.monthlyReach}/เดือน`,
+                  label: `${activeTfOption.viewsLabelTh} (${activeTfOption.viewsLabelEn})`,
+                  value: activeOverview.totalViews,
+                  sub: reachSubLabel,
                   showAllPlatforms: false,
                   color: 'text-violet-700',
                 },
                 {
                   icon: Flame,
                   iconBg: 'bg-emerald-100 text-emerald-700',
-                  label: 'Engagement เฉลี่ย (Total ER)',
-                  value: currentCreator.overview.totalEr,
+                  label: `Engagement เฉลี่ย (${activeTfOption.shortBadge})`,
+                  value: activeOverview.totalEr,
                   sub: tiktokErText,
                   highlightPlatform: 'TikTok',
                   color: 'text-emerald-700',
@@ -231,9 +313,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 {
                   icon: Play,
                   iconBg: 'bg-amber-100 text-amber-700',
-                  label: 'ยอดดูเฉลี่ยต่อคลิป (Avg. Views)',
-                  value: currentCreator.overview.avgViewsPerContent,
-                  sub: `Likes ${currentCreator.overview.monthlyLikes}/เดือน`,
+                  label: `ยอดดูเฉลี่ยต่อคลิป (${activeTfOption.shortBadge})`,
+                  value: activeOverview.avgViewsPerContent,
+                  sub: likesSubLabel,
                   showAllPlatforms: false,
                   color: 'text-[#1E1B4B]',
                 },
@@ -242,7 +324,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               const KpiIcon = kpi.icon;
               return (
                 <motion.div
-                  key={idx}
+                  key={`${idx}-${activeStatsTimeframe}`}
                   variants={fadeUpVariant}
                   custom={idx * 0.07}
                   whileHover={{ y: -4, transition: { duration: 0.18, ease: 'easeOut' } }}
@@ -270,7 +352,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                     </motion.div>
                   </div>
                   <p className={`text-2xl sm:text-3xl font-bold font-mono-num mt-2 ${kpi.color}`}>
-                    <AnimatedCounter value={kpi.value} duration={1.7} delay={idx * 0.08} />
+                    <AnimatedCounter value={kpi.value} duration={1.4} delay={idx * 0.05} />
                   </p>
                   <div className="flex items-center justify-between gap-2 mt-1.5">
                     <p className="text-[11px] text-slate-500 font-medium">{kpi.sub}</p>
@@ -304,16 +386,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <div key={groupIdx} className="flex items-center gap-6">
               <span>{currentCreator.nameEn} PRODUCTION & {currentCreator.tierLabel || 'MEDIA KIT 2026'}</span>
               <span className="text-amber-400">·</span>
-              {currentCreator.platforms.map((plat) => (
-                <React.Fragment key={plat.id}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <PlatformBrandIcon platform={plat.name} size="xs" />
-                    <span>{plat.name.toUpperCase()} {plat.followers} (ER {plat.er})</span>
-                  </span>
-                  <span className="text-amber-400">·</span>
-                </React.Fragment>
-              ))}
-              <span>{currentCreator.overview.totalViews60d} VIEWS IN 60 DAYS</span>
+              {currentCreator.platforms.map((plat) => {
+                const tfM = resolvePlatformMetricsForTimeframe(plat, activeStatsTimeframe);
+                const platNameUpper = (plat?.name || plat?.id || '').toUpperCase();
+                return (
+                  <React.Fragment key={plat.id}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <PlatformBrandIcon platform={plat.name} size="xs" />
+                      <span>{platNameUpper} {plat.followers} (ER {tfM.er})</span>
+                    </span>
+                    <span className="text-amber-400">·</span>
+                  </React.Fragment>
+                );
+              })}
+              <span>
+                {activeOverview.totalViews}{' '}
+                {(activeTfOption?.viewsLabelEn || activeTfOption?.viewsLabel || 'VIEWS').toUpperCase()}
+              </span>
               <span className="text-amber-400">·</span>
             </div>
           ))}

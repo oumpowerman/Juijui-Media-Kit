@@ -85,15 +85,53 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
   const [clientQuote, setClientQuote] = useState('');
   const [clientRole, setClientRole] = useState('');
 
-  // Sample Clip #1 & #2 quick fields
-  const [clip1Title, setClip1Title] = useState('');
-  const [clip1Platform, setClip1Platform] =
-    useState<BrandSampleClip['platform']>('TikTok');
-  const [clip1Views, setClip1Views] = useState('850K');
-  const [clip1Url, setClip1Url] = useState('https://www.tiktok.com/@juijui.j');
-  const [clip1Format, setClip1Format] = useState('Comedy Sitcom (9:16)');
-  const [clip1Desc, setClip1Desc] = useState('');
-  const [clip1Campaign, setClip1Campaign] = useState('');
+  // Dynamic Multi-Clip Editor State
+  const [sampleClips, setSampleClips] = useState<BrandSampleClip[]>([
+    {
+      id: `clip-${Date.now()}`,
+      title: '',
+      platform: 'TikTok',
+      views: '750K',
+      url: 'https://www.tiktok.com/@juijui.j',
+      formatTag: 'Comedy Sitcom (9:16)',
+      description: '',
+      campaignName: '',
+      driveVideoUrl: '',
+      thumbnailUrl: '',
+    },
+  ]);
+
+  const handleAddSampleClip = () => {
+    setSampleClips((prev) => [
+      ...prev,
+      {
+        id: `clip-${Date.now()}-${prev.length + 1}`,
+        title: '',
+        platform: 'TikTok',
+        views: '500K',
+        url: 'https://www.tiktok.com/@juijui.j',
+        formatTag: 'Short Video (9:16)',
+        description: '',
+        campaignName: '',
+        driveVideoUrl: '',
+        thumbnailUrl: '',
+      },
+    ]);
+  };
+
+  const handleUpdateSampleClip = <K extends keyof BrandSampleClip>(
+    index: number,
+    field: K,
+    value: BrandSampleClip[K]
+  ) => {
+    setSampleClips((prev) =>
+      prev.map((clip, i) => (i === index ? { ...clip, [field]: value } : clip))
+    );
+  };
+
+  const handleRemoveSampleClip = (index: number) => {
+    setSampleClips((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     if (editingBrandItem) {
@@ -113,23 +151,31 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
       setClientQuote(editingBrandItem.clientQuote || '');
       setClientRole(editingBrandItem.clientRole || '');
 
-      const firstClip = editingBrandItem.sampleClips?.[0];
-      if (firstClip) {
-        setClip1Title(firstClip.title);
-        setClip1Platform(firstClip.platform);
-        setClip1Views(firstClip.views);
-        setClip1Url(firstClip.url);
-        setClip1Format(firstClip.formatTag);
-        setClip1Desc(firstClip.description || '');
-        setClip1Campaign(firstClip.campaignName || '');
+      if (editingBrandItem.sampleClips && editingBrandItem.sampleClips.length > 0) {
+        setSampleClips(
+          editingBrandItem.sampleClips.map((c) => ({
+            ...c,
+            description: c.description || '',
+            campaignName: c.campaignName || '',
+            driveVideoUrl: c.driveVideoUrl || '',
+            thumbnailUrl: c.thumbnailUrl || '',
+          }))
+        );
       } else {
-        setClip1Title('');
-        setClip1Platform('TikTok');
-        setClip1Views('500K');
-        setClip1Url('https://www.tiktok.com/@juijui.j');
-        setClip1Format('Short Video (9:16)');
-        setClip1Desc('');
-        setClip1Campaign('');
+        setSampleClips([
+          {
+            id: `clip-${Date.now()}`,
+            title: '',
+            platform: 'TikTok',
+            views: '500K',
+            url: 'https://www.tiktok.com/@juijui.j',
+            formatTag: 'Short Video (9:16)',
+            description: '',
+            campaignName: '',
+            driveVideoUrl: '',
+            thumbnailUrl: '',
+          },
+        ]);
       }
     } else {
       setBrandName('');
@@ -147,13 +193,20 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
       setCampaignHighlight('');
       setClientQuote('');
       setClientRole('');
-      setClip1Title('');
-      setClip1Platform('TikTok');
-      setClip1Views('750K');
-      setClip1Url('https://www.tiktok.com/@juijui.j');
-      setClip1Format('Comedy Sitcom (9:16)');
-      setClip1Desc('');
-      setClip1Campaign('');
+      setSampleClips([
+        {
+          id: `clip-${Date.now()}`,
+          title: '',
+          platform: 'TikTok',
+          views: '750K',
+          url: 'https://www.tiktok.com/@juijui.j',
+          formatTag: 'Comedy Sitcom (9:16)',
+          description: '',
+          campaignName: '',
+          driveVideoUrl: '',
+          thumbnailUrl: '',
+        },
+      ]);
     }
   }, [editingBrandItem]);
 
@@ -166,21 +219,20 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const sampleClips: BrandSampleClip[] = clip1Title.trim()
-      ? [
-          {
-            id: editingBrandItem?.sampleClips?.[0]?.id || `clip-${Date.now()}`,
-            title: clip1Title.trim(),
-            platform: clip1Platform,
-            views: clip1Views.trim() || '500K',
-            url: clip1Url.trim() || 'https://www.tiktok.com/@juijui.j',
-            formatTag: clip1Format.trim() || 'Short Video',
-            description: clip1Desc.trim() || undefined,
-            campaignName: clip1Campaign.trim() || undefined,
-          },
-          ...(editingBrandItem?.sampleClips?.slice(1) || []),
-        ]
-      : editingBrandItem?.sampleClips || [];
+    const cleanedClips: BrandSampleClip[] = sampleClips
+      .filter((c) => c.title.trim() !== '')
+      .map((c, idx) => ({
+        id: c.id || `clip-${Date.now()}-${idx}`,
+        title: c.title.trim(),
+        platform: c.platform,
+        views: c.views.trim() || '500K',
+        url: c.url.trim() || 'https://www.tiktok.com/@juijui.j',
+        formatTag: c.formatTag.trim() || 'Short Video',
+        description: c.description?.trim() || undefined,
+        campaignName: c.campaignName?.trim() || undefined,
+        driveVideoUrl: c.driveVideoUrl?.trim() || undefined,
+        thumbnailUrl: c.thumbnailUrl?.trim() || undefined,
+      }));
 
     await onUpsertBrandCollaboration({
       id: editingBrandItem?.id,
@@ -201,7 +253,7 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
         `ร่วมงานแคมเปญโปรโมตสินค้ากับ ${brandName.trim()} ถ่ายทอดจุดขายอย่างเป็นธรรมชาติ`,
       clientQuote: clientQuote.trim() || undefined,
       clientRole: clientRole.trim() || undefined,
-      sampleClips,
+      sampleClips: cleanedClips,
     });
   };
 
@@ -531,76 +583,139 @@ export const BrandPartnersTab: React.FC<BrandPartnersTabProps> = ({
             />
           </div>
 
-          {/* Sample Clip Link Section */}
-          <div className="p-3 rounded-xl bg-violet-50/50 border border-violet-200/70 space-y-2.5">
-            <div className="text-[11px] font-bold text-violet-900 flex items-center gap-1.5">
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>คลิปตัวอย่างไฮไลต์ของแบรนด์นี้ (Sample Video Link)</span>
-            </div>
-            <input
-              type="text"
-              value={clip1Title}
-              onChange={(e) => setClip1Title(e.target.value)}
-              placeholder="ชื่อคลิปตัวอย่าง เช่น เมื่อเพื่อนบอกจะกินแค่คำเดียว..."
-              className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
-            />
-            <div className="grid grid-cols-3 gap-2">
-              <select
-                value={clip1Platform}
-                onChange={(e) =>
-                  setClip1Platform(e.target.value as BrandSampleClip['platform'])
-                }
-                className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800"
-              >
-                <option value="TikTok">TikTok</option>
-                <option value="Instagram Reels">IG Reels</option>
-                <option value="Facebook">Facebook</option>
-                <option value="YouTube Shorts">YT Shorts</option>
-                <option value="YouTube">YouTube</option>
-              </select>
-              <input
-                type="text"
-                value={clip1Views}
-                onChange={(e) => setClip1Views(e.target.value)}
-                placeholder="ยอดวิว เช่น 1.2M"
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono-num text-slate-900"
-              />
-              <input
-                type="text"
-                value={clip1Format}
-                onChange={(e) => setClip1Format(e.target.value)}
-                placeholder="แนวคลิป"
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input
-                type="text"
-                value={clip1Campaign}
-                onChange={(e) => setClip1Campaign(e.target.value)}
-                placeholder="ชื่อแคมเปญ (เช่น แคมเปญบักเก็ตเพื่อนซี้)"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
-              />
-              <input
-                type="text"
-                value={clip1Url}
-                onChange={(e) => setClip1Url(e.target.value)}
-                placeholder="ลิงก์คลิปจริง https://www.tiktok.com/..."
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
-              />
-            </div>
-            <textarea
-              rows={2}
-              value={clip1Desc}
-              onChange={(e) => setClip1Desc(e.target.value)}
-              placeholder="คำบรรยายเฉพาะของคลิปนี้ (วัตถุประสงค์ / Hook / จุดขาย)..."
-              className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
-            />
-            {editingBrandItem?.sampleClips && editingBrandItem.sampleClips.length > 1 && (
-              <div className="pt-1 text-[11px] text-violet-700 font-medium">
-                ✓ แบรนด์นี้มีคลิปสะสมทั้งหมด {editingBrandItem.sampleClips.length} คลิป (ระบบแสดงผลใน Modal ครบทุกคลิป)
+          {/* Dynamic Multi-Clip Sample Video Section */}
+          <div className="p-3.5 rounded-xl bg-violet-50/50 border border-violet-200/70 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-bold text-violet-900 flex items-center gap-1.5">
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>คลิปตัวอย่างของแบรนด์นี้ ({sampleClips.length} คลิป)</span>
               </div>
-            )}
+              <button
+                type="button"
+                onClick={handleAddSampleClip}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-violet-700 hover:bg-violet-800 text-white text-[11px] font-semibold cursor-pointer shadow-2xs"
+              >
+                <Plus className="w-3 h-3" />
+                <span>เพิ่มคลิปตัวอย่าง</span>
+              </button>
+            </div>
+
+            <div className="space-y-3 max-h-[380px] overflow-y-auto slim-scroll pr-1">
+              {sampleClips.map((clip, idx) => (
+                <div
+                  key={clip.id || idx}
+                  className="p-3 rounded-xl bg-white border border-violet-200/80 space-y-2"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                    <span className="text-[11px] font-bold text-violet-900">
+                      คลิปตัวอย่างที่ #{idx + 1}
+                    </span>
+                    {sampleClips.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSampleClip(idx)}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>ลบคลิปนี้</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={clip.title}
+                    onChange={(e) => handleUpdateSampleClip(idx, 'title', e.target.value)}
+                    placeholder="ชื่อคลิปตัวอย่าง เช่น เมื่อเพื่อนบอกจะกินแค่คำเดียว..."
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50/60 focus:bg-white text-xs font-semibold text-slate-900"
+                  />
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      value={clip.platform}
+                      onChange={(e) =>
+                        handleUpdateSampleClip(
+                          idx,
+                          'platform',
+                          e.target.value as BrandSampleClip['platform']
+                        )
+                      }
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-800"
+                    >
+                      <option value="TikTok">TikTok</option>
+                      <option value="Instagram Reels">IG Reels</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="YouTube Shorts">YT Shorts</option>
+                      <option value="YouTube">YouTube</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={clip.views}
+                      onChange={(e) => handleUpdateSampleClip(idx, 'views', e.target.value)}
+                      placeholder="ยอดวิว เช่น 1.2M"
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono-num text-slate-900"
+                    />
+                    <input
+                      type="text"
+                      value={clip.formatTag}
+                      onChange={(e) => handleUpdateSampleClip(idx, 'formatTag', e.target.value)}
+                      placeholder="แนวคลิป"
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={clip.campaignName || ''}
+                      onChange={(e) =>
+                        handleUpdateSampleClip(idx, 'campaignName', e.target.value)
+                      }
+                      placeholder="ชื่อแคมเปญ (เช่น แคมเปญบักเก็ตเพื่อนซี้)"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+                    />
+                    <input
+                      type="text"
+                      value={clip.url}
+                      onChange={(e) => handleUpdateSampleClip(idx, 'url', e.target.value)}
+                      placeholder="ลิงก์คลิปจริง https://www.tiktok.com/..."
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={clip.driveVideoUrl || ''}
+                      onChange={(e) =>
+                        handleUpdateSampleClip(idx, 'driveVideoUrl', e.target.value)
+                      }
+                      placeholder="ลิงก์วิดีโอ Google Drive / MP4 (ถ้ามี)"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+                    />
+                    <input
+                      type="text"
+                      value={clip.thumbnailUrl || ''}
+                      onChange={(e) =>
+                        handleUpdateSampleClip(idx, 'thumbnailUrl', e.target.value)
+                      }
+                      placeholder="ลิงก์รูปปกคลิป (ถ้ามี)"
+                      className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+                    />
+                  </div>
+
+                  <textarea
+                    rows={2}
+                    value={clip.description || ''}
+                    onChange={(e) =>
+                      handleUpdateSampleClip(idx, 'description', e.target.value)
+                    }
+                    placeholder="คำบรรยายเฉพาะของคลิปนี้ (วัตถุประสงค์ / Hook / จุดขาย)..."
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-900"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Client Quote Optional */}

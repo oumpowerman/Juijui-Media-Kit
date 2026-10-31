@@ -50,6 +50,8 @@ interface AdminStudioModalProps {
   isCloudConnected: boolean;
   authErrorNotice?: string | null;
   onClearAuthError?: () => void;
+  cloudSyncError?: string | null;
+  onClearCloudSyncError?: () => void;
   onLoginGoogle: () => Promise<void>;
   onLogoutGoogle: () => Promise<void>;
   onSaveCreator: (updated: CreatorProfile) => Promise<void>;
@@ -57,6 +59,7 @@ interface AdminStudioModalProps {
   onSelectCreatorId: (id: string) => void;
   onUpdateBookingStatus: (bookingId: string, status: BookingRecord['status']) => Promise<void>;
   onResetDefaults: () => Promise<void>;
+  onSaveAndCloseSuccess?: (message: string) => void;
 }
 
 export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
@@ -80,6 +83,16 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
       // Ignore cancelled popup
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  const handleSaveAndClose = async () => {
+    const isSaved = await studio.saveDraftChanges();
+    if (isSaved) {
+      props.onSaveAndCloseSuccess?.(
+        'บันทึกข้อมูลขึ้น Firebase Cloud และอัปเดตหน้าเว็บเรียบร้อยแล้ว'
+      );
+      onClose();
     }
   };
 
@@ -162,10 +175,8 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
     },
   ];
 
-  const showDraftSaveFooter =
-    studio.activeTab === 'identity' ||
-    studio.activeTab === 'rates' ||
-    studio.activeTab === 'brands';
+  const showDraftSaveFooter = true;
+  const activeErrorMessage = studio.saveErrorNotice || props.cloudSyncError;
 
   return (
     <AnimatePresence>
@@ -322,6 +333,42 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
               </div>
             )}
 
+            {/* Firestore Save / Sync Error Banner */}
+            {activeErrorMessage && (
+              <div className="shrink-0 mx-5 sm:mx-6 mt-3 p-3 bg-rose-50 border border-rose-300 rounded-xl text-xs text-rose-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="font-bold text-rose-950">
+                      แจ้งเตือนการเชื่อมต่อ/บันทึกข้อมูล Firebase Cloud Firestore:
+                    </p>
+                    <p className="mt-0.5 text-rose-800 break-words">{activeErrorMessage}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => studio.saveDraftChanges()}
+                    disabled={studio.isSaving}
+                    className="px-2.5 py-1 bg-rose-700 hover:bg-rose-800 text-white font-semibold rounded-lg cursor-pointer text-[11px] shadow-2xs"
+                  >
+                    ลองบันทึกอีกครั้ง
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      studio.clearSaveErrorNotice();
+                      props.onClearCloudSyncError?.();
+                    }}
+                    className="p-1 text-rose-600 hover:text-rose-900 cursor-pointer"
+                    aria-label="ปิดการแจ้งเตือน"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 6-Tab Navigation Bar */}
             <div className="shrink-0 flex items-center gap-1.5 px-5 sm:px-6 py-2.5 border-b border-slate-200 bg-white overflow-x-auto no-scrollbar">
               {TABS.map((tab) => {
@@ -383,11 +430,12 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                       isSaving={studio.isSaving}
                       hasUnsavedChanges={studio.hasUnsavedChanges}
                       onUpdateRootField={studio.updateRootField}
+                      onUpdateSectionHeaderField={studio.updateSectionHeaderField}
                       onUpdateStrengthItem={studio.updateStrengthItem}
                       onAddStrengthItem={studio.addStrengthItem}
                       onDeleteStrengthItem={studio.deleteStrengthItem}
                       onUpdateContactField={studio.updateContactField}
-                      onSaveDraftChanges={() => studio.saveDraftChanges()}
+                      onSaveDraftChanges={handleSaveAndClose}
                     />
                   )}
 
@@ -403,13 +451,28 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                       onDeleteAddOnItem={studio.deleteAddOnItem}
                       onUpdateOverviewStat={studio.updateOverviewStat}
                       onUpdatePlatformStat={studio.updatePlatformStat}
+                      onUpdateDefaultStatsTimeframe={studio.updateDefaultStatsTimeframe}
+                      onUpdateOverviewTimeframeStat={studio.updateOverviewTimeframeStat}
+                      onUpdatePlatformTimeframeStat={studio.updatePlatformTimeframeStat}
                       onUpdateAgeGroupPercent={studio.updateAgeGroupPercent}
+                      onUpdateAgeGroupField={studio.updateAgeGroupField}
+                      onAddAgeGroupItem={studio.addAgeGroupItem}
+                      onDeleteAgeGroupItem={studio.deleteAgeGroupItem}
                       onUpdateGenderPercent={studio.updateGenderPercent}
+                      onUpdateGenderField={studio.updateGenderField}
                       onUpdateLocationField={studio.updateLocationField}
+                      onAddLocationItem={studio.addLocationItem}
+                      onDeleteLocationItem={studio.deleteLocationItem}
+                      onUpdateDemographicsMeta={studio.updateDemographicsMeta}
+                      onCopyDemographicsBetweenPlatforms={studio.copyDemographicsBetweenPlatforms}
+                      onRecalculateDemographicsWeightedAverage={studio.recalculateDemographicsWeightedAverage}
+                      onUpdateDefaultDemographicView={studio.updateDefaultDemographicView}
                       onUpdateFreePerkField={studio.updateFreePerkField}
+                      onAddFreePerkItem={studio.addFreePerkItem}
+                      onDeleteFreePerkItem={studio.deleteFreePerkItem}
                       onUpdateCustomCollabNote={studio.updateCustomCollabNote}
                       onUpdateSupportedFormats={studio.updateSupportedFormats}
-                      onSaveDraftChanges={() => studio.saveDraftChanges()}
+                      onSaveDraftChanges={handleSaveAndClose}
                       onResetDefaults={studio.onResetDefaults}
                     />
                   )}
@@ -447,6 +510,8 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                   {studio.activeTab === 'comments' && (
                     <CommentsProofTab
                       commentProofs={studio.draftCreator.commentProofs}
+                      proofSummaryConfig={studio.draftCreator.proofSummaryConfig}
+                      onUpdateProofSummaryConfig={studio.updateProofSummaryConfig}
                       editingCommentItem={studio.editingCommentItem}
                       onSetEditingCommentItem={studio.setEditingCommentItem}
                       onUpsertCommentProof={studio.upsertCommentProof}
@@ -490,7 +555,9 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                       onClearDiff={platformSync.clearDiff}
                       onApplyDiff={platformSync.applyDiff}
                       onRollbackToSnapshot={platformSync.rollbackToSnapshot}
-                      saveDraftChanges={studio.saveDraftChanges}
+                      saveDraftChanges={async (customDraft, customMessage) => {
+                        await studio.saveDraftChanges(customDraft, customMessage);
+                      }}
                       tiktokOAuth={platformSync.tiktokOAuth}
                       onConnectTikTok={platformSync.connectTikTok}
                       onDisconnectTikTok={platformSync.disconnectTikTok}
@@ -507,10 +574,10 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
               </AnimatePresence>
             </div>
 
-            {/* Persistent Studio Action Footer for Draft Editing Tabs */}
+            {/* Persistent Studio Action Footer for All Tabs */}
             {showDraftSaveFooter && (
               <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-5 sm:px-6 py-3 border-t border-slate-200 bg-white">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     type="button"
                     onClick={studio.onResetDefaults}
@@ -519,13 +586,17 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>รีเซ็ตค่าเริ่มต้นตาม PDF</span>
                   </button>
-                  {studio.hasUnsavedChanges ? (
+                  {activeErrorMessage ? (
+                    <span className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
+                      เกิดข้อผิดพลาดในการบันทึก — กรุณาตรวจสอบแถบแจ้งเตือนด้านบน
+                    </span>
+                  ) : studio.hasUnsavedChanges ? (
                     <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
                       มีการแก้ไขที่ยังไม่ได้กดบันทึก
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-400 hidden sm:inline">
-                      ข้อมูลล่าสุดซิงก์กับหน้าเว็บเรียบร้อยแล้ว
+                    <span className="text-xs text-emerald-700 bg-emerald-50/70 border border-emerald-200/80 px-2.5 py-1 rounded-lg hidden sm:inline">
+                      ข้อมูลล่าสุดซิงก์กับ Firebase Cloud เรียบร้อยแล้ว
                     </span>
                   )}
                 </div>
@@ -540,9 +611,9 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => studio.saveDraftChanges()}
+                    onClick={handleSaveAndClose}
                     disabled={studio.isSaving}
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-violet-700 hover:bg-violet-800 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-violet-700 hover:bg-violet-800 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-60"
                   >
                     <Save className="w-3.5 h-3.5" />
                     <span>

@@ -33,6 +33,33 @@ export const INITIAL_CREATORS: CreatorProfile[] = [
     faviconShape: 'rounded',
     browserTabTitle: 'JUIJUI Media Kit 2026 — Interactive Creator Rate Card',
     updatedLabel: 'อัปเดตข้อมูล พฤษภาคม 2569 · ข้อมูลยอดรวมย้อนหลัง 60 วัน',
+    defaultStatsTimeframe: '60d',
+    overviewTimeframes: {
+      '28d': {
+        totalViews: '13.45M',
+        totalEr: '5.32%',
+        avgViewsPerContent: '295K',
+        monthlyReach: '1.75M',
+        monthlyLikes: '726.9K',
+        periodBadgeLabel: 'สถิติย้อนหลัง 28 วันล่าสุด',
+      },
+      '60d': {
+        totalViews: '28M',
+        totalEr: '5.24%',
+        avgViewsPerContent: '289K',
+        monthlyReach: '1.75M',
+        monthlyLikes: '23.2K',
+        periodBadgeLabel: '28 วันล่าสุด · วิว 60 วัน',
+      },
+      lifetime: {
+        totalViews: '367.7M',
+        totalEr: '5.92%',
+        avgViewsPerContent: '340K',
+        monthlyReach: '24.5M+',
+        monthlyLikes: '23.15M',
+        periodBadgeLabel: 'สถิติสะสมทั้งหมด (Lifetime)',
+      },
+    },
     overview: {
       totalFollowers: '979.1K+',
       totalViews60d: '28M',

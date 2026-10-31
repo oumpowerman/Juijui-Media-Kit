@@ -269,11 +269,15 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
           >
             <div className="inline-flex items-center gap-2 text-xs font-bold text-amber-300 drop-shadow-xs tracking-wider uppercase">
               <Clapperboard className="w-3.5 h-3.5 text-amber-400" />
-              <span>03. VIRAL PORTFOLIO (16:9 WIDESCREEN & 9:16 SHORT-FORM)</span>
+              <span>
+                {currentCreator.sectionHeaders?.viralBadge ||
+                  '03. VIRAL PORTFOLIO (16:9 WIDESCREEN & 9:16 SHORT-FORM)'}
+              </span>
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-1.5">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight">
-                ผลงานไวรัล & ตัวอย่างคอนเทนต์ยอดนิยม
+                {currentCreator.sectionHeaders?.viralTitle ||
+                  'ผลงานไวรัล & ตัวอย่างคอนเทนต์ยอดนิยม'}
               </h2>
               {/* Decorative Platform Icons Badge Strip */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 shadow-2xs">
@@ -287,7 +291,8 @@ export const ViralShowcaseSection: React.FC<ViralShowcaseSectionProps> = ({
               </div>
             </div>
             <p className="text-xs sm:text-sm text-slate-300 mt-1.5 max-w-2xl leading-relaxed">
-              เลือกกรองดูเฉพาะคลิปแนวนอน 16:9, คลิปสั้นแนวตั้ง 9:16 หรือสลับเป็นมุมมองตารางดูง่ายเพื่อเปรียบเทียบสถิติทันที
+              {currentCreator.sectionHeaders?.viralSubtitle ||
+                'เลือกกรองดูเฉพาะคลิปแนวนอน 16:9, คลิปสั้นแนวตั้ง 9:16 หรือสลับเป็นมุมมองตารางดูง่ายเพื่อเปรียบเทียบสถิติทันที'}
             </p>
           </motion.div>
 

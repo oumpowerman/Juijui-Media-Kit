@@ -7,7 +7,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { CreatorProfile, PlatformStat } from '../data/types';
+import {
+  CreatorProfile,
+  PlatformStat,
+  StatsTimeframe,
+  TimeframePlatformMetrics,
+  TimeframeOverviewMetrics,
+} from '../data/types';
+import {
+  resolvePlatformMetricsForTimeframe,
+  resolveOverviewForTimeframe,
+  parseFormattedStatNumber,
+  formatCompactStatNumber,
+} from '../data/helpers';
 import {
   PlatformApiCredentials,
   DEFAULT_API_CREDENTIALS,
@@ -890,46 +902,97 @@ export function usePlatformSync() {
         overviewSnapshot: JSON.parse(JSON.stringify(currentCreator.overview)),
       };
 
-      // 2. Build updated platforms array
+      // 2. Build updated platforms array with all 3 timeframes (28d, 60d, lifetime)
       const updatedPlatforms: PlatformStat[] = currentCreator.platforms.map((curr) => {
         const diff = diffItems.find((d) => d.platformId === curr.id && d.isSelected);
         if (!diff) return curr;
+
+        const nextTimeframes: Record<StatsTimeframe, TimeframePlatformMetrics> = {
+          '28d': diff.timeframes?.['28d'] || resolvePlatformMetricsForTimeframe(curr, '28d'),
+          '60d': diff.timeframes?.['60d'] || {
+            views: diff.newViews || curr.views,
+            likes: diff.newLikes || curr.likes,
+            comments: diff.newComments || curr.comments,
+            shares: diff.newShares || curr.shares,
+            er: diff.newEr,
+            erNum: parseFloat(diff.newEr.replace(/[^0-9.]/g, '')) || curr.erNum,
+          },
+          lifetime:
+            diff.timeframes?.lifetime || resolvePlatformMetricsForTimeframe(curr, 'lifetime'),
+        };
+
+        const defaultTf = nextTimeframes['60d'];
 
         return {
           ...curr,
           handle: diff.handle || curr.handle,
           followers: diff.newFollowers,
           followersNum: diff.newFollowersNum,
-          views: diff.newViews || curr.views,
-          likes: diff.newLikes || curr.likes,
-          comments: diff.newComments || curr.comments,
-          shares: diff.newShares || curr.shares,
-          er: diff.newEr,
-          erNum: parseFloat(diff.newEr.replace(/[^0-9.]/g, '')) || curr.erNum,
+          views: defaultTf.views || diff.newViews || curr.views,
+          likes: defaultTf.likes || diff.newLikes || curr.likes,
+          comments: defaultTf.comments || diff.newComments || curr.comments,
+          shares: defaultTf.shares || diff.newShares || curr.shares,
+          er: defaultTf.er || diff.newEr,
+          erNum: defaultTf.erNum || parseFloat(diff.newEr.replace(/[^0-9.]/g, '')) || curr.erNum,
+          timeframes: nextTimeframes,
         };
       });
 
-      // Calculate new total followers & average ER
+      // Calculate new total followers
       const totalFollowersNum = updatedPlatforms.reduce((sum, p) => sum + (p.followersNum || 0), 0);
       const totalFollowersFormatted = formatFollowerCount(totalFollowersNum);
-      const validErCount = updatedPlatforms.filter((p) => p.erNum > 0).length;
-      const avgEr =
-        validErCount > 0
-          ? (
-              updatedPlatforms.reduce((sum, p) => sum + (p.erNum || 0), 0) / validErCount
-            ).toFixed(1) + '%'
-          : currentCreator.overview.totalEr;
+
+      // Recompute overviewTimeframes across all 3 timeframes (28d, 60d, lifetime)
+      const buildOverviewForTf = (tf: StatsTimeframe): TimeframeOverviewMetrics => {
+        const existingTf = resolveOverviewForTimeframe(currentCreator, tf);
+        const tfPlatformMetrics = updatedPlatforms.map((p) =>
+          resolvePlatformMetricsForTimeframe(p, tf)
+        );
+        const sumViews = tfPlatformMetrics.reduce(
+          (s, m) => s + parseFormattedStatNumber(m.views),
+          0
+        );
+        const sumLikes = tfPlatformMetrics.reduce(
+          (s, m) => s + parseFormattedStatNumber(m.likes),
+          0
+        );
+        const validErs = tfPlatformMetrics.filter((m) => m.erNum > 0);
+        const avgErVal =
+          validErs.length > 0
+            ? (validErs.reduce((s, m) => s + m.erNum, 0) / validErs.length).toFixed(2) + '%'
+            : existingTf.totalEr;
+
+        return {
+          ...existingTf,
+          totalViews:
+            sumViews > 0 ? formatCompactStatNumber(sumViews) : existingTf.totalViews,
+          totalEr: avgErVal,
+          monthlyLikes:
+            sumLikes > 0 ? formatCompactStatNumber(sumLikes) : existingTf.monthlyLikes,
+        };
+      };
+
+      const nextOverviewTimeframes: Record<StatsTimeframe, TimeframeOverviewMetrics> = {
+        '28d': buildOverviewForTf('28d'),
+        '60d': buildOverviewForTf('60d'),
+        lifetime: buildOverviewForTf('lifetime'),
+      };
 
       const updatedOverview = {
         ...currentCreator.overview,
         totalFollowers: totalFollowersFormatted,
-        totalEr: avgEr,
+        totalViews60d:
+          nextOverviewTimeframes['60d'].totalViews || currentCreator.overview.totalViews60d,
+        totalEr: nextOverviewTimeframes['60d'].totalEr || currentCreator.overview.totalEr,
+        monthlyLikes:
+          nextOverviewTimeframes['60d'].monthlyLikes || currentCreator.overview.monthlyLikes,
       };
 
       const updatedCreator: CreatorProfile = {
         ...currentCreator,
         platforms: updatedPlatforms,
         overview: updatedOverview,
+        overviewTimeframes: nextOverviewTimeframes,
       };
 
       // Push previous snapshot to history
@@ -938,7 +1001,7 @@ export function usePlatformSync() {
       // Save to Firestore and state
       await saveDraftChanges(
         updatedCreator,
-        `อัปเดตข้อมูลสถิติสดสำเร็จ (${diffItems.filter((d) => d.isSelected).length} แพลตฟอร์ม)`
+        `อัปเดตข้อมูลสถิติสดทั้ง 3 ช่วงเวลา (28d / 60d / Lifetime) สำเร็จ (${diffItems.filter((d) => d.isSelected).length} แพลตฟอร์ม)`
       );
 
       // Clear diff
@@ -1066,6 +1129,7 @@ export function usePlatformSync() {
               newShares: fetchedData.sharesFormatted || item.currentShares,
               newEr: fetchedData.erFormatted,
               erDelta,
+              timeframes: fetchedData.timeframes || item.timeframes,
               status: fetchedData.status,
               statusMessage: fetchedData.statusMessage,
               source: fetchedData.source,

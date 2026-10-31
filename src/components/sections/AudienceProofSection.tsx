@@ -155,14 +155,18 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
           >
             <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700">
               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
-              <span>04. 5-STAR BRAND TESTIMONIALS & AUDIENCE ENGAGEMENT</span>
+              <span>
+                {currentCreator.sectionHeaders?.proofBadge ||
+                  '04. 5-STAR BRAND TESTIMONIALS & AUDIENCE ENGAGEMENT'}
+              </span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold text-[#1E1B4B] mt-1">
-              เสียงตอบรับจากผู้ชม & รีวิว 5 ดาวจากแบรนด์
+              {currentCreator.sectionHeaders?.proofTitle ||
+                'เสียงตอบรับจากผู้ชม & รีวิว 5 ดาวจากแบรนด์'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              ฟีดแบ็กจริงหลังจบแคมเปญจากลูกค้าแบรนด์และคอมเมนต์ยอดไลค์สูงของช่อง{' '}
-              {currentCreator.nameTh}
+              {currentCreator.sectionHeaders?.proofSubtitle ||
+                `ฟีดแบ็กจริงหลังจบแคมเปญจากลูกค้าแบรนด์และคอมเมนต์ยอดไลค์สูงของช่อง ${currentCreator.nameTh}`}
             </p>
           </motion.div>
 
@@ -236,7 +240,8 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
             <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-amber-400/70 to-transparent pointer-events-none" />
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-xs font-semibold text-slate-600">
-                คะแนนความพึงพอใจจากแบรนด์และเอเจนซี่
+                {currentCreator.proofSummaryConfig?.ratingLabel ||
+                  'คะแนนความพึงพอใจจากแบรนด์และเอเจนซี่'}
               </span>
               <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/70 px-2 py-0.5 rounded-md shrink-0">
                 5-STAR RATING
@@ -245,7 +250,7 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
 
             <div className="flex items-center gap-3 flex-wrap">
               <span className="text-2xl sm:text-3xl font-bold font-mono-num text-slate-900 tracking-tight">
-                5.0
+                {currentCreator.proofSummaryConfig?.ratingScore || '5.0'}
                 <span className="text-sm font-semibold text-slate-400">/5.0</span>
               </span>
               <div className="flex items-center gap-1">
@@ -270,7 +275,10 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
 
             <p className="mt-2 text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span>ส่งงานไว ตรงบรีฟ ยอดวิวทะลุ KPI ทุกแคมเปญ</span>
+              <span>
+                {currentCreator.proofSummaryConfig?.ratingSubtitle ||
+                  'ส่งงานไว ตรงบรีฟ ยอดวิวทะลุ KPI ทุกแคมเปญ'}
+              </span>
             </p>
           </motion.div>
 
@@ -295,16 +303,20 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
 
             <div className="flex items-baseline gap-2.5 flex-wrap">
               <span className="text-2xl sm:text-3xl font-bold font-mono-num text-rose-600 tracking-tight">
-                99.4%
+                {currentCreator.proofSummaryConfig?.sentimentPercent || '99.4%'}
               </span>
               <span className="text-xs sm:text-sm font-bold text-slate-700">
-                คอมเมนต์เชิงบวก & ตามซื้อจริง
+                {currentCreator.proofSummaryConfig?.sentimentTitle ||
+                  'คอมเมนต์เชิงบวก & ตามซื้อจริง'}
               </span>
             </div>
 
             <p className="mt-2 text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
               <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500 shrink-0" />
-              <span>เล่าเรื่องสนุก คนดูจบคลิปโดยไม่ปัดหนีโฆษณา</span>
+              <span>
+                {currentCreator.proofSummaryConfig?.sentimentSubtitle ||
+                  'เล่าเรื่องสนุก คนดูจบคลิปโดยไม่ปัดหนีโฆษณา'}
+              </span>
             </p>
           </motion.div>
 
@@ -320,7 +332,8 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
             <div className="absolute inset-x-0 top-0 h-[1.5px] bg-linear-to-r from-transparent via-emerald-400/60 to-transparent pointer-events-none" />
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-xs font-semibold text-slate-600">
-                คลังหลักฐานฟีดแบ็กจริง (Verified Proof)
+                {currentCreator.proofSummaryConfig?.verifiedTitle ||
+                  'คลังหลักฐานฟีดแบ็กจริง (Verified Proof)'}
               </span>
               <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/70 px-2 py-0.5 rounded-md shrink-0">
                 REAL CHAT & SOCIAL
@@ -338,7 +351,10 @@ export const AudienceProofSection: React.FC<AudienceProofSectionProps> = ({
 
             <p className="mt-2 text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>คลิกเลือกการ์ดด้านบนเพื่อกรองดูเฉพาะรีวิวแบรนด์หรือแฟนคลับ</span>
+              <span>
+                {currentCreator.proofSummaryConfig?.verifiedSubtitle ||
+                  'คลิกเลือกการ์ดด้านบนเพื่อกรองดูเฉพาะรีวิวแบรนด์หรือแฟนคลับ'}
+              </span>
             </p>
           </motion.div>
         </motion.div>

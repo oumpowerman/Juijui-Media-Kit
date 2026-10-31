@@ -13,37 +13,37 @@
         },
         "nameTh": {
           "type": "string",
-          "maxLength": 200,
+          "maxLength": 500,
           "description": "Creator channel Thai name"
         },
         "nameEn": {
           "type": "string",
-          "maxLength": 200,
+          "maxLength": 500,
           "description": "Creator channel English name"
         },
         "roleTitle": {
           "type": "string",
-          "maxLength": 300,
+          "maxLength": 1000,
           "description": "Role subtitle of the creator"
         },
         "tierLabel": {
           "type": "string",
-          "maxLength": 200,
+          "maxLength": 300,
           "description": "Creator tier and follower badge label"
         },
         "updatedLabel": {
           "type": "string",
-          "maxLength": 200,
+          "maxLength": 300,
           "description": "Last updated date label"
         },
         "quote": {
           "type": "string",
-          "maxLength": 500,
+          "maxLength": 1500,
           "description": "Signature channel quote"
         },
         "bioDescription": {
           "type": "string",
-          "maxLength": 2000,
+          "maxLength": 5000,
           "description": "Channel bio and storytelling description"
         },
         "avatarUrl": {

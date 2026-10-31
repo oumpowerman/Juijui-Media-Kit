@@ -11,6 +11,7 @@ import {
 import {
   collection,
   doc,
+  getDocFromServer,
   onSnapshot,
   setDoc,
 } from 'firebase/firestore';
@@ -31,6 +32,7 @@ import {
   BookingRecord,
   ViralWorkItem,
   BrandCollaborationItem,
+  StatsTimeframe,
 } from './data/creatorData';
 import { OriginalPdfModal } from './components/OriginalPdfModal';
 import { MediaLightboxModal } from './components/MediaLightboxModal';
@@ -56,21 +58,27 @@ import { applyBrowserTabMeta } from './utils/faviconUtils';
 
 function withBrandDefaults(creator: CreatorProfile): CreatorProfile {
   return {
+    ...INITIAL_CREATORS[0],
     ...creator,
+    defaultStatsTimeframe:
+      creator.defaultStatsTimeframe ||
+      INITIAL_CREATORS[0].defaultStatsTimeframe ||
+      '60d',
+    overviewTimeframes:
+      creator.overviewTimeframes || INITIAL_CREATORS[0].overviewTimeframes,
     faviconMode: creator.faviconMode || INITIAL_CREATORS[0].faviconMode || 'emoji',
-    faviconEmoji: creator.faviconEmoji || INITIAL_CREATORS[0].faviconEmoji || '✨',
+    faviconEmoji: creator.faviconEmoji ?? INITIAL_CREATORS[0].faviconEmoji ?? '✨',
     faviconUrl: creator.faviconUrl ?? INITIAL_CREATORS[0].faviconUrl ?? '',
     faviconShape: creator.faviconShape || INITIAL_CREATORS[0].faviconShape || 'rounded',
     browserTabTitle:
-      creator.browserTabTitle ||
-      INITIAL_CREATORS[0].browserTabTitle ||
+      creator.browserTabTitle ??
+      INITIAL_CREATORS[0].browserTabTitle ??
       `${creator.nameEn} Media Kit 2026 — Interactive Creator Rate Card`,
     brandShowcaseConfig:
       creator.brandShowcaseConfig || INITIAL_CREATORS[0].brandShowcaseConfig,
-    brandCollaborations:
-      creator.brandCollaborations && creator.brandCollaborations.length > 0
-        ? creator.brandCollaborations
-        : INITIAL_CREATORS[0].brandCollaborations,
+    brandCollaborations: Array.isArray(creator.brandCollaborations)
+      ? creator.brandCollaborations
+      : INITIAL_CREATORS[0].brandCollaborations,
   };
 }
 
@@ -83,16 +91,28 @@ export default function App() {
   const [adminUser, setAdminUser] = useState<User | null>(null);
   const [isCloudConnected, setIsCloudConnected] = useState<boolean>(false);
   const [authErrorNotice, setAuthErrorNotice] = useState<string | null>(null);
+  const [cloudSyncError, setCloudSyncError] = useState<string | null>(null);
+  const [saveSuccessToast, setSaveSuccessToast] = useState<string | null>(null);
+
+  const triggerMainSaveToast = (message: string) => {
+    setSaveSuccessToast(message);
+    window.setTimeout(() => {
+      setSaveSuccessToast((prev) => (prev === message ? null : prev));
+    }, 3500);
+  };
 
   // Interactive selections for Rate Card & Quote Calculator
   const [selectedPackageId, setSelectedPackageId] = useState<string>('pkg-standard');
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [rateViewMode, setRateViewMode] = useState<RateViewMode>('both');
 
-  // Interactive filters for Portfolio & Comments
+  // Interactive filters for Portfolio, Comments & 3-Timeframe Stats (28d / 60d / lifetime)
   const [portfolioFilter, setPortfolioFilter] = useState<string>('all');
   const [commentFilter, setCommentFilter] = useState<CommentFilterType>('all');
   const [activePlatformHighlight, setActivePlatformHighlight] = useState<string>('all');
+  const [activeStatsTimeframe, setActiveStatsTimeframe] = useState<StatsTimeframe>(
+    INITIAL_CREATORS[0].defaultStatsTimeframe || '60d'
+  );
 
   // Modals state
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
@@ -202,32 +222,91 @@ export default function App() {
 
   // 2. 100% Pure Firebase Cloud Firestore Real-Time Sync for /creators and /bookings (Shared by all visitors)
   useEffect(() => {
-    const unsubCreators = onSnapshot(
-      collection(db, 'creators'),
-      (snapshot) => {
+    let isMounted = true;
+    const primaryCreatorId = INITIAL_CREATORS[0].id; // 'juijui-main'
+    const primaryDocRef = doc(db, 'creators', primaryCreatorId);
+
+    // 2A. Verify directly against Firestore Server on boot so we never overwrite existing Cloud data
+    getDocFromServer(primaryDocRef)
+      .then((serverSnap) => {
+        if (!isMounted) return;
         setIsCloudConnected(true);
-        if (!snapshot.empty) {
-          const loadedCreators = snapshot.docs.map((d) =>
-            withBrandDefaults(d.data() as CreatorProfile)
-          );
-          setCreators(loadedCreators);
+        setCloudSyncError(null);
+        if (serverSnap.exists()) {
+          const cloudCreator = withBrandDefaults(serverSnap.data() as CreatorProfile);
+          setCreators((prev) => {
+            const exists = prev.some((c) => c.id === cloudCreator.id);
+            return exists
+              ? prev.map((c) => (c.id === cloudCreator.id ? cloudCreator : c))
+              : [cloudCreator, ...prev];
+          });
         } else {
-          // Auto-seed initial creator profile into Firestore Cloud when database collection is empty
-          INITIAL_CREATORS.forEach((c) => {
-            setDoc(doc(db, 'creators', c.id), sanitizeForFirestore(c)).catch((err) => {
-              console.warn('Initial Firestore seed notice:', err);
-            });
+          // Only seed initial profile when verified from the server that 'juijui-main' truly does not exist yet
+          const seedPayload = sanitizeForFirestore(INITIAL_CREATORS[0]);
+          setDoc(primaryDocRef, seedPayload).catch((err) => {
+            console.warn('Initial Firestore seed notice:', err);
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn('Firestore server check info:', err);
+      });
+
+    // 2B. Direct document real-time listener on /creators/juijui-main (Guaranteed single-doc get rule)
+    const unsubPrimaryCreator = onSnapshot(
+      primaryDocRef,
+      (docSnap) => {
+        if (!isMounted) return;
+        setIsCloudConnected(true);
+        setCloudSyncError(null);
+        if (docSnap.exists()) {
+          const loadedPrimary = withBrandDefaults(docSnap.data() as CreatorProfile);
+          setCreators((prev) => {
+            const exists = prev.some((c) => c.id === loadedPrimary.id);
+            return exists
+              ? prev.map((c) => (c.id === loadedPrimary.id ? loadedPrimary : c))
+              : [loadedPrimary, ...prev];
           });
         }
       },
       (error) => {
-        console.warn('Firestore creators listener info:', error.message);
+        console.warn('Firestore primary creator listener error:', error.message);
+        if (isMounted) {
+          setCloudSyncError(`ไม่สามารถดึงข้อมูลโปรไฟล์หลักจาก Firebase Cloud: ${error.message}`);
+        }
       }
     );
 
+    // 2C. Multi-creator collection real-time listener on /creators (Supports Roster profiles)
+    const unsubCreators = onSnapshot(
+      collection(db, 'creators'),
+      (snapshot) => {
+        if (!isMounted) return;
+        setIsCloudConnected(true);
+        setCloudSyncError(null);
+        if (!snapshot.empty) {
+          const loadedCreators = snapshot.docs.map((d) =>
+            withBrandDefaults(d.data() as CreatorProfile)
+          );
+          // Ensure primary creator ('juijui-main') is ordered first in the roster list
+          loadedCreators.sort((a, b) => {
+            if (a.id === primaryCreatorId) return -1;
+            if (b.id === primaryCreatorId) return 1;
+            return a.id.localeCompare(b.id);
+          });
+          setCreators(loadedCreators);
+        }
+      },
+      (error) => {
+        console.warn('Firestore creators collection listener info:', error.message);
+      }
+    );
+
+    // 2D. Bookings collection real-time listener on /bookings
     const unsubBookings = onSnapshot(
       collection(db, 'bookings'),
       (snapshot) => {
+        if (!isMounted) return;
         if (!snapshot.empty) {
           const loadedBookings = snapshot.docs.map(
             (d) => d.data() as BookingRecord
@@ -241,6 +320,8 @@ export default function App() {
     );
 
     return () => {
+      isMounted = false;
+      unsubPrimaryCreator();
       unsubCreators();
       unsubBookings();
     };
@@ -248,6 +329,12 @@ export default function App() {
 
   const currentCreator =
     creators.find((c) => c.id === activeCreatorId) || creators[0] || INITIAL_CREATORS[0];
+
+  // Synchronize activeStatsTimeframe when creator or admin's defaultStatsTimeframe changes
+  useEffect(() => {
+    const preferredTf = currentCreator.defaultStatsTimeframe || '60d';
+    setActiveStatsTimeframe(preferredTf);
+  }, [currentCreator.id, currentCreator.defaultStatsTimeframe]);
 
   // Dynamically synchronize browser tab favicon (emoji / cropped image / avatar) and tab title
   useEffect(() => {
@@ -288,17 +375,36 @@ export default function App() {
   };
 
   const handleSaveCreator = async (updated: CreatorProfile) => {
+    setCloudSyncError(null);
     const cleanUpdated = sanitizeForFirestore(updated);
-    // 1. Write directly to Firebase Cloud Firestore (/creators/{id}) as single source of truth
+
+    // Check document payload size before sending to Firestore (1 MB = 1,048,576 bytes limit)
+    const serialized = JSON.stringify(cleanUpdated);
+    const byteSize =
+      typeof Blob !== 'undefined' ? new Blob([serialized]).size : serialized.length;
+    if (byteSize > 980_000) {
+      const sizeKb = Math.round(byteSize / 1024);
+      const sizeErr = `ข้อมูลโปรไฟล์มีขนาดใหญ่เกินขีดจำกัด 1 MB ของ Firebase Cloud (ประมาณ ${sizeKb} KB) กรุณาใช้ลิงก์รูปภาพภายนอกหรือ Google Drive URL แทนการฝังไฟล์รูปภาพขนาดใหญ่โดยตรง`;
+      setCloudSyncError(sizeErr);
+      throw new Error(sizeErr);
+    }
+
+    // Write directly to Firebase Cloud Firestore (/creators/{id}) as single source of truth
     try {
       await setDoc(doc(db, 'creators', cleanUpdated.id), cleanUpdated);
-      setCreators((prev) => prev.map((c) => (c.id === cleanUpdated.id ? cleanUpdated : c)));
+      setIsCloudConnected(true);
+      setCreators((prev) =>
+        prev.map((c) => (c.id === cleanUpdated.id ? withBrandDefaults(cleanUpdated) : c))
+      );
     } catch (err) {
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      setCloudSyncError(`บันทึกข้อมูลขึ้น Firebase Cloud ไม่สำเร็จ: ${rawMsg}`);
       handleFirestoreError(err, OperationType.WRITE, `creators/${cleanUpdated.id}`);
     }
   };
 
   const handleAddCreator = async (partial: Partial<CreatorProfile>) => {
+    setCloudSyncError(null);
     const created: CreatorProfile = sanitizeForFirestore({
       ...INITIAL_CREATORS[0],
       ...partial,
@@ -308,9 +414,11 @@ export default function App() {
 
     try {
       await setDoc(doc(db, 'creators', created.id), created);
-      setCreators((prev) => [...prev, created]);
+      setCreators((prev) => [...prev, withBrandDefaults(created)]);
       setActiveCreatorId(created.id);
     } catch (err) {
+      const rawMsg = err instanceof Error ? err.message : String(err);
+      setCloudSyncError(`สร้างโปรไฟล์ใหม่บน Firebase Cloud ไม่สำเร็จ: ${rawMsg}`);
       handleFirestoreError(err, OperationType.CREATE, `creators/${created.id}`);
     }
   };
@@ -335,11 +443,14 @@ export default function App() {
   };
 
   const handleResetDefaults = async () => {
+    setCloudSyncError(null);
     const freshDefaults = sanitizeForFirestore(structuredClone(INITIAL_CREATORS));
     for (const c of freshDefaults) {
       try {
         await setDoc(doc(db, 'creators', c.id), c);
       } catch (err) {
+        const rawMsg = err instanceof Error ? err.message : String(err);
+        setCloudSyncError(`รีเซ็ตค่าเริ่มต้นบน Firebase Cloud ไม่สำเร็จ: ${rawMsg}`);
         handleFirestoreError(err, OperationType.WRITE, `creators/${c.id}`);
       }
     }
@@ -350,16 +461,8 @@ export default function App() {
   const handleLoginGoogle = async () => {
     setAuthErrorNotice(null);
     try {
-      const user = await signInAdminWithGoogle();
-      if (user) {
-        for (const c of creators) {
-          try {
-            await setDoc(doc(db, 'creators', c.id), sanitizeForFirestore(c));
-          } catch {
-            // ignore
-          }
-        }
-      }
+      await signInAdminWithGoogle();
+      // Do NOT overwrite /creators in Firestore with local memory state upon login!
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setAuthErrorNotice(msg);
@@ -386,6 +489,8 @@ export default function App() {
         <HeroSection
           creators={creators}
           currentCreator={currentCreator}
+          activeStatsTimeframe={activeStatsTimeframe}
+          onSelectStatsTimeframe={setActiveStatsTimeframe}
           onSelectCreatorId={setActiveCreatorId}
           onOpenAdmin={isAdminMode ? () => openAdminAtTab('identity') : undefined}
           onOpenPdf={() => setIsPdfModalOpen(true)}
@@ -395,6 +500,8 @@ export default function App() {
         {/* 03. ANALYTICS & AUDIENCE INSIGHTS SECTION (Animated Telemetry Graph Canvas) */}
         <AnalyticsSection
           currentCreator={currentCreator}
+          activeStatsTimeframe={activeStatsTimeframe}
+          onSelectStatsTimeframe={setActiveStatsTimeframe}
           activePlatformHighlight={activePlatformHighlight}
           onSelectPlatformHighlight={setActivePlatformHighlight}
           onOpenAdmin={isAdminMode ? () => openAdminAtTab('rates') : undefined}
@@ -617,6 +724,8 @@ export default function App() {
         isCloudConnected={isCloudConnected}
         authErrorNotice={authErrorNotice}
         onClearAuthError={() => setAuthErrorNotice(null)}
+        cloudSyncError={cloudSyncError}
+        onClearCloudSyncError={() => setCloudSyncError(null)}
         onLoginGoogle={handleLoginGoogle}
         onLogoutGoogle={signOutAdmin}
         onSaveCreator={handleSaveCreator}
@@ -624,7 +733,28 @@ export default function App() {
         onSelectCreatorId={setActiveCreatorId}
         onUpdateBookingStatus={handleUpdateBookingStatus}
         onResetDefaults={handleResetDefaults}
+        onSaveAndCloseSuccess={triggerMainSaveToast}
       />
+
+      {/* FLOATING SAVE SUCCESS TOAST ON MAIN PAGE */}
+      {saveSuccessToast && (
+        <div className="fixed bottom-4 right-4 z-[80] max-w-md animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div className="bg-emerald-600 text-white px-4 py-3 rounded-2xl shadow-[0_20px_50px_-12px_rgba(5,150,105,0.65)] border border-emerald-400/40 flex items-center gap-2.5 text-xs sm:text-sm font-semibold">
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <Check className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span>{saveSuccessToast}</span>
+            <button
+              type="button"
+              onClick={() => setSaveSuccessToast(null)}
+              className="ml-1 p-1 rounded-lg text-emerald-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="ปิดการแจ้งเตือน"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
