@@ -1,6 +1,6 @@
 {
-  "summary":  "Detailed architectural plan for refactoring usePlatformSync.ts into modular domain hooks with a unified facade, introducing a centralized platform registry, and upgrading PlatformSyncTab UI components for maintainability and scalability.",
-  "updatedAt":  "2026-10-31T17:19:32.790201496Z",
+  "summary":  "แผน Refactor PlatformSyncTab.tsx เป็นสถาปัตยกรรมระดับ Enterprise พร้อมระบบ Internal Sub-Tabs และ Horizontal Snap-Scroll Card Deck แบ่งเป็น 2 โหมดหลัก: 1) Smart Media Kit Importer (ไม่ต้องขอ API Key) สำหรับอัปเดตสถิติทั้ง 4 แพลตฟอร์มแบบ Unified 4-Platform Overview + Individual Cards และ 2) Official API & Cloud Sync พร้อมระบบ Snapshot & Rollback History",
+  "updatedAt":  "2026-10-31T17:45:53.197664849Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

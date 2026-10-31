@@ -9,6 +9,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { EASE_OUT_EXPO } from './sections/motionVariants';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface OriginalPdfModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export const OriginalPdfModal: React.FC<OriginalPdfModalProps> = ({
   pdfUrl,
   creatorName,
 }) => {
+  useLockBodyScroll(isOpen);
   const [activePage, setActivePage] = useState(0);
   const [slideDirection, setSlideDirection] = useState<1 | -1>(1);
   const [viewMode, setViewMode] = useState<'slides' | 'all'>('slides');

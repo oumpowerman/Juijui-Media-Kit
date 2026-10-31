@@ -12,6 +12,7 @@ import {
   BookingStep2BrandForm,
   BookingStep3Confirmation,
 } from './booking';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface BookingQuoteModalProps {
   isOpen: boolean;
@@ -59,22 +60,8 @@ export const BookingQuoteModal: React.FC<BookingQuoteModalProps> = ({
     }
   }, [initialReferenceClip]);
 
-  // Lock body scroll while Booking modal is open
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
-    };
-  }, [isOpen]);
+  // Lock both documentElement (<html>) and document.body scroll while Booking modal is open
+  useLockBodyScroll(isOpen);
 
   const activePackage =
     creator.packages.find((p) => p.id === selectedPackageId) ||

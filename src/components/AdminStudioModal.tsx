@@ -37,6 +37,7 @@ import { RosterBackupTab } from './admin/RosterBackupTab';
 import { PlatformSyncTab } from './admin/PlatformSyncTab';
 import { EASE_OUT_EXPO } from './sections/motionVariants';
 import { User } from '../firebase';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface AdminStudioModalProps {
   isOpen: boolean;
@@ -96,22 +97,8 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
     }
   };
 
-  // Lock body scroll while Admin modal is open
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
-    };
-  }, [isOpen]);
+  // Lock both documentElement (<html>) and document.body scroll while Admin modal is open
+  useLockBodyScroll(isOpen);
 
   const TABS: {
     id: AdminTabType;
@@ -188,7 +175,12 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.24, ease: 'easeOut' }}
           onClick={onClose}
-          className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-xs"
+          onWheel={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+            }
+          }}
+          className="fixed inset-0 z-[80] flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-xs overscroll-contain"
           role="dialog"
           aria-modal="true"
         >
@@ -199,7 +191,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ duration: 0.38, ease: EASE_OUT_EXPO }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl w-full max-w-6xl xl:max-w-[90vw] 2xl:max-w-[1640px] h-[90vh] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
+            className="bg-[#F8FAFC] border border-slate-200/90 rounded-2xl w-full max-w-6xl xl:max-w-[90vw] 2xl:max-w-[1640px] h-[90vh] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl overscroll-contain"
           >
             {/* Top Studio Header */}
             <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 sm:px-6 py-3.5 border-b border-slate-200 bg-white">
@@ -415,7 +407,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
             </div>
 
             {/* Delegated Sub-Component Viewport with Ultra-Slim Scrollbar */}
-            <div className="flex-1 min-h-0 overflow-y-auto slim-scroll p-5 sm:p-6">
+            <div className="flex-1 min-h-0 overflow-y-auto slim-scroll p-5 sm:p-6 overscroll-contain">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={studio.activeTab}

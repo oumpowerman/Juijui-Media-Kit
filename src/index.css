@@ -25,6 +25,13 @@
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
+
+  html.modal-open,
+  body.modal-open {
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    touch-action: none;
+  }
 }
 
 /* Global ultra-slim scrollbar for WebKit/Blink browsers (Chrome, Edge, Safari) */

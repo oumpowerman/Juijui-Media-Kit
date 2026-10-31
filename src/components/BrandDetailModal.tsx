@@ -25,6 +25,7 @@ import {
   resolveVideoSource,
 } from '../data/creatorData';
 import { PlatformBrandIcon } from './ui/PlatformBrandIcon';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface BrandDetailModalProps {
   brand: BrandCollaborationItem | null;
@@ -57,26 +58,18 @@ const BrandDetailModalContent: React.FC<{
   const [activeCampaignFilter, setActiveCampaignFilter] = useState<string>('all');
   const [isPlayingInlineVideo, setIsPlayingInlineVideo] = useState(false);
 
-  // Lock body scroll and handle Escape key press
+  // Lock both documentElement (<html>) and document.body scroll while modal is open
+  useLockBodyScroll(true);
+
+  // Handle Escape key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    // Lock body scroll
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    document.body.style.overflow = 'hidden';
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
     };
   }, [onClose]);
 

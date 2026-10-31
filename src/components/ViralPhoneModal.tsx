@@ -25,6 +25,7 @@ import {
 } from '../data/creatorData';
 import { PlatformBrandIcon } from './ui/PlatformBrandIcon';
 import { EASE_OUT_EXPO } from './sections/motionVariants';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface FloatingHeart {
   id: number;
@@ -111,7 +112,10 @@ export const ViralPhoneModal: React.FC<ViralPhoneModalProps> = ({
   const heartIdCounter = useRef(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Lock body scroll and close on Escape key
+  // Lock both documentElement (<html>) and document.body scroll while modal is open
+  useLockBodyScroll(Boolean(item));
+
+  // Close on Escape key
   useEffect(() => {
     if (!item) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -121,18 +125,8 @@ export const ViralPhoneModal: React.FC<ViralPhoneModalProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    const originalOverflow = document.body.style.overflow;
-    const originalPaddingRight = document.body.style.paddingRight;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-    document.body.style.overflow = 'hidden';
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = originalOverflow;
-      document.body.style.paddingRight = originalPaddingRight;
     };
   }, [item, onClose]);
 

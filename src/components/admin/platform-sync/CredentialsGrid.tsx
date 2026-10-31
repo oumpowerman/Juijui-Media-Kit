@@ -88,10 +88,8 @@ export const CredentialsGrid: React.FC<CredentialsGridProps> = ({
         }
       />
 
-      {/* 2. TikTok Official OAuth 2.0 & Smart Media Kit Importer */}
+      {/* 2. TikTok Official OAuth 2.0 & API */}
       <TikTokOAuthCard
-        draftCreator={draftCreator}
-        onApplySmartImport={onApplySmartImport}
         tiktokCreds={localCreds.tiktok}
         tiktokOAuth={tiktokOAuth}
         showManualToken={Boolean(showTokens['tt_token'])}

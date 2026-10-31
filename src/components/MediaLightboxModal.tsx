@@ -16,6 +16,7 @@ import {
 import { ViralWorkItem, resolveGoogleDriveImage } from '../data/creatorData';
 import { PlatformBrandIcon } from './ui/PlatformBrandIcon';
 import { EASE_OUT_EXPO } from './sections/motionVariants';
+import { useLockBodyScroll } from '../hooks/useLockBodyScroll';
 
 interface MediaLightboxModalProps {
   item: ViralWorkItem | null;
@@ -28,6 +29,7 @@ export const MediaLightboxModal: React.FC<MediaLightboxModalProps> = ({
   onClose,
   onBookSimilar,
 }) => {
+  useLockBodyScroll(Boolean(item));
   return (
     <AnimatePresence>
       {item && (
