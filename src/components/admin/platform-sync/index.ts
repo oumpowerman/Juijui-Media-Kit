@@ -6,5 +6,6 @@ export * from './YouTubeCredentialCard';
 export * from './TikTokOAuthCard';
 export * from './InstagramCredentialCard';
 export * from './FacebookCredentialCard';
+export * from './CredentialsGrid';
 export * from './SnapshotHistorySection';
 export * from './ApiSetupGuideModal';

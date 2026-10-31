@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Key, BookOpen } from 'lucide-react';
+import { Check, Key, BookOpen, Layers } from 'lucide-react';
 import {
   PlatformApiCredentials,
   SyncSnapshotHistoryItem,
@@ -8,13 +8,11 @@ import {
   PlatformSyncTabProps,
   SyncHeaderHero,
   DiffComparisonSection,
-  YouTubeCredentialCard,
-  TikTokOAuthCard,
-  InstagramCredentialCard,
-  FacebookCredentialCard,
+  CredentialsGrid,
   SnapshotHistorySection,
   ApiSetupGuideModal,
 } from './platform-sync';
+import { getAllRegisteredPlatforms } from '../../config/platformRegistry';
 
 export type { PlatformSyncTabProps } from './platform-sync';
 
@@ -45,6 +43,7 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
   onTestSinglePlatform,
   onClearSingleTestResult,
   onApplySinglePlatformToDiff,
+  onApplySmartImport,
 }) => {
   // Local edit state for credentials form
   const [localCreds, setLocalCreds] = useState<PlatformApiCredentials>(credentials);
@@ -53,6 +52,8 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
   const [isApplying, setIsApplying] = useState(false);
   const [isRollingBack, setIsRollingBack] = useState<string | null>(null);
   const [showApiGuideModal, setShowApiGuideModal] = useState(false);
+
+  const registeredPlatforms = getAllRegisteredPlatforms();
 
   useEffect(() => {
     setLocalCreds(credentials);
@@ -151,95 +152,42 @@ export const PlatformSyncTab: React.FC<PlatformSyncTabProps> = ({
           </div>
         </div>
 
-        {/* 4 Platforms Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* YouTube Data API v3 */}
-          <YouTubeCredentialCard
-            youtubeCreds={localCreds.youtube}
-            showToken={Boolean(showTokens['yt_key'])}
-            onToggleShowToken={() => toggleShowToken('yt_key')}
-            onChangeYoutubeCreds={(nextYoutube) =>
-              setLocalCreds((prev) => ({ ...prev, youtube: nextYoutube }))
-            }
-            isTesting={Boolean(singleTestLoading['youtube'])}
-            testResult={singleTestResults['youtube'] || null}
-            onRunTest={(forceSim) =>
-              onTestSinglePlatform?.('youtube', draftCreator.platforms, localCreds, forceSim)
-            }
-            onClearTest={() => onClearSingleTestResult?.('youtube')}
-            onApplyToDiff={(data) =>
-              onApplySinglePlatformToDiff?.(data, draftCreator.platforms)
-            }
-          />
+        {/* Modular Grid of Platform Credential Cards */}
+        <CredentialsGrid
+          draftCreator={draftCreator}
+          localCreds={localCreds}
+          setLocalCreds={setLocalCreds}
+          showTokens={showTokens}
+          toggleShowToken={toggleShowToken}
+          tiktokOAuth={tiktokOAuth}
+          onConnectTikTok={onConnectTikTok}
+          onDisconnectTikTok={onDisconnectTikTok}
+          onRefreshTikTokToken={onRefreshTikTokToken}
+          onSaveTikTokConfig={onSaveTikTokConfig}
+          singleTestLoading={singleTestLoading}
+          singleTestResults={singleTestResults}
+          onTestSinglePlatform={onTestSinglePlatform}
+          onClearSingleTestResult={onClearSingleTestResult}
+          onApplySinglePlatformToDiff={onApplySinglePlatformToDiff}
+          onApplySmartImport={onApplySmartImport}
+          onUpdateCredentials={onUpdateCredentials}
+        />
 
-          {/* TikTok Official OAuth 2.0 & Open API */}
-          <TikTokOAuthCard
-            tiktokCreds={localCreds.tiktok}
-            tiktokOAuth={tiktokOAuth}
-            showManualToken={Boolean(showTokens['tt_token'])}
-            onToggleShowManualToken={() => toggleShowToken('tt_token')}
-            onChangeTiktokCreds={(nextTiktok) =>
-              setLocalCreds((prev) => ({ ...prev, tiktok: nextTiktok }))
-            }
-            onConnectTikTok={onConnectTikTok}
-            onDisconnectTikTok={onDisconnectTikTok}
-            onRefreshTikTokToken={onRefreshTikTokToken}
-            onSaveTikTokConfig={onSaveTikTokConfig}
-            isTesting={Boolean(singleTestLoading['tiktok'])}
-            testResult={singleTestResults['tiktok'] || null}
-            onRunTest={(forceSim) =>
-              onTestSinglePlatform?.('tiktok', draftCreator.platforms, localCreds, forceSim)
-            }
-            onClearTest={() => onClearSingleTestResult?.('tiktok')}
-            onApplyToDiff={(data) =>
-              onApplySinglePlatformToDiff?.(data, draftCreator.platforms)
-            }
-          />
-
-          {/* Instagram Graph API v20.0 */}
-          <InstagramCredentialCard
-            instagramCreds={localCreds.instagram}
-            showToken={Boolean(showTokens['ig_token'])}
-            onToggleShowToken={() => toggleShowToken('ig_token')}
-            onChangeInstagramCreds={(nextIg, persistImmediately) => {
-              const nextCreds: PlatformApiCredentials = {
-                ...localCreds,
-                instagram: nextIg,
-              };
-              setLocalCreds(nextCreds);
-              if (persistImmediately) {
-                onUpdateCredentials(nextCreds);
-              }
-            }}
-            isTesting={Boolean(singleTestLoading['instagram'])}
-            testResult={singleTestResults['instagram'] || null}
-            onRunTest={(forceSim) =>
-              onTestSinglePlatform?.('instagram', draftCreator.platforms, localCreds, forceSim)
-            }
-            onClearTest={() => onClearSingleTestResult?.('instagram')}
-            onApplyToDiff={(data) =>
-              onApplySinglePlatformToDiff?.(data, draftCreator.platforms)
-            }
-          />
-
-          {/* Facebook Page Graph API v20.0 */}
-          <FacebookCredentialCard
-            facebookCreds={localCreds.facebook}
-            showToken={Boolean(showTokens['fb_token'])}
-            onToggleShowToken={() => toggleShowToken('fb_token')}
-            onChangeFacebookCreds={(nextFb) =>
-              setLocalCreds((prev) => ({ ...prev, facebook: nextFb }))
-            }
-            isTesting={Boolean(singleTestLoading['facebook'])}
-            testResult={singleTestResults['facebook'] || null}
-            onRunTest={(forceSim) =>
-              onTestSinglePlatform?.('facebook', draftCreator.platforms, localCreds, forceSim)
-            }
-            onClearTest={() => onClearSingleTestResult?.('facebook')}
-            onApplyToDiff={(data) =>
-              onApplySinglePlatformToDiff?.(data, draftCreator.platforms)
-            }
-          />
+        {/* Scalability note for dev team */}
+        <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-violet-600" />
+            <span>
+              สถาปัตยกรรมรองรับการเพิ่มแพลตฟอร์มใหม่ผ่าน{' '}
+              <code className="px-1.5 py-0.5 rounded bg-slate-100 text-violet-800 font-mono text-[11px]">
+                PLATFORM_REGISTRY
+              </code>{' '}
+              (ปัจจุบันลงทะเบียนแล้ว {registeredPlatforms.length} แพลตฟอร์ม)
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-slate-400">
+            <span>Snapshot Buffer: สูงสุด 5 เวอร์ชัน</span>
+          </div>
         </div>
       </div>
 

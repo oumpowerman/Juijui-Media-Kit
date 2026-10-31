@@ -467,6 +467,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                       onCopyDemographicsBetweenPlatforms={studio.copyDemographicsBetweenPlatforms}
                       onRecalculateDemographicsWeightedAverage={studio.recalculateDemographicsWeightedAverage}
                       onUpdateDefaultDemographicView={studio.updateDefaultDemographicView}
+                      onApplySmartImport={studio.applySmartImportCreator}
                       onUpdateFreePerkField={studio.updateFreePerkField}
                       onAddFreePerkItem={studio.addFreePerkItem}
                       onDeleteFreePerkItem={studio.deleteFreePerkItem}
@@ -568,6 +569,7 @@ export const AdminStudioModal: React.FC<AdminStudioModalProps> = (props) => {
                       onTestSinglePlatform={platformSync.testSinglePlatformFn}
                       onClearSingleTestResult={platformSync.clearSingleTestResult}
                       onApplySinglePlatformToDiff={platformSync.applySinglePlatformToDiff}
+                      onApplySmartImport={studio.applySmartImportCreator}
                     />
                   )}
                 </motion.div>

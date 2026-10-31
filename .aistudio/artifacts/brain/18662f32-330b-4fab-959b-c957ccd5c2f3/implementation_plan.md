@@ -1,49 +1,93 @@
-# ปรับปรุง UI แถบแท็บฟิลเตอร์แพลตฟอร์มใน Audience DNA (เจาะลึกกลุ่มผู้ชมและฐานแฟนคลับ)
+# Implementation Plan: Refactor `usePlatformSync.ts` & `PlatformSyncTab` Architecture
 
-แผนงานนี้จัดทำขึ้นเพื่อปรับแต่งแถบควบคุมแท็บแพลตฟอร์มในส่วน **02. Audience DNA (เจาะลึกกลุ่มผู้ชมและฐานแฟนคลับ)** ให้มีความกระชับ เรียบหรู สะอาดตา ไม่ตกบรรทัดบนหน้าจอขนาดแล็ปท็อป/แท็บเล็ต ตามคำแนะนำและภาพตัวอย่างที่ผู้ใช้ระบุ
-
----
-
-## สรุปการปรับปรุงตามความต้องการของผู้ใช้
-
-1. **ปรับลดความกว้างและระยะห่าง (Tight Spacing & Padding)**:
-   - ลดระยะห่างระหว่างปุ่มแท็บจาก `gap-1.5` เป็น `gap-1 sm:gap-1.5`
-   - ปรับ padding ของปุ่มแท็บจาก `px-3.5 py-2` เป็น `px-2.5 sm:px-3 py-1.5` เพื่อให้แถบปุ่มมีขนาดกระทัดรัด
-2. **ปรับความยาวข้อความ (Concise Wording)**:
-   - เปลี่ยนข้อความปุ่มภาพรวมจาก `ภาพรวมทุกช่องทาง (เฉลี่ยถ่วงน้ำหนัก)` เป็น **`ภาพรวมทั้งหมด`**
-   - ตัด badge ป้ายกำกับที่ยาวเกินไปในปุ่มออก ช่วยประหยัดพื้นที่แนวนอนไปได้มากกว่า 100px
-3. **ซ่อนตัวเลขผู้ติดตามเมื่อหน้าจอแคบ (Responsive Follower Counts)**:
-   - บนหน้าจอขนาดกลาง/แล็ปท็อป (ต่ำกว่า `xl`/`2xl`) ซ่อนตัวเลขผู้ติดตาม (`hidden xl:inline-block`) เพื่อให้ปุ่มทั้ง 5 ปุ่ม (ภาพรวมทั้งหมด, TikTok, Facebook, Instagram, YouTube) เรียงสวยงามในแถวเดียว ไม่ตกไปบรรทัดที่สองเหมือนในรูปภาพอ้างอิง
-4. **ปรับข้อความระบุมุมมองฝั่งซ้าย (Clean Perspective Badge)**:
-   - ปรับข้อความฝั่งซ้ายให้สั้นกระชับ ไม่ตัดขึ้นบรรทัดใหม่ เช่น `เฉลี่ยรวม 4 ช่องทาง` เมื่อเลือกภาพรวม และ `ช่องทาง [Platform]` เมื่อเลือกรายช่องทาง
+## Overview
+Refactor the monolithic `usePlatformSync.ts` (1,175 lines) into cleanly separated, single-responsibility domain hooks coordinated through a unified façade hook. Introduce a centralized **Platform Registry** to easily scale and plug in future social platforms (e.g., Lemon8, Threads, X/Twitter), and modernize `PlatformSyncTab` UI components to ensure seamless maintenance and onboarding for new team members.
 
 ---
 
-## สถาปัตยกรรมและการจัดวาง (Layout Architecture)
+## User Review Required
 
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ Header: เจาะลึกกลุ่มผู้ชมและฐานแฟนคลับ (Audience DNA)              [Verified Insights] │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│ [มุมมอง: เฉลี่ยรวม 4 ช่องทาง]               [ภาพรวมทั้งหมด] [TikTok] [FB] [IG] [YouTube] │
-├───────────────────────────────┬────────────────────────┬───────────────────────────────┤
-│ 1. ช่วงอายุผู้ติดตาม (Age)     │ 2. สัดส่วนเพศ (Gender)  │ 3. พื้นที่ผู้ชมสูงสุด (Loc)    │
-│    18 - 24 ปี      32%        │    ชาย  64.3%          │    กรุงเทพฯ        80.9%      │
-│    25 - 34 ปี      44%        │    หญิง 35.7%          │    สุราษฎร์ธานี    11.5%      │
-└───────────────────────────────┴────────────────────────┴───────────────────────────────┘
-```
+> [!IMPORTANT]
+> **Zero Breaking Changes**: The public API of `usePlatformSync()` and `PlatformSyncTabProps` remains 100% backwards-compatible. Any existing consumer in Admin Studio will continue functioning seamlessly without needing adjustments.
+
+- **Hook Architecture**: Domain-driven sub-hooks (`usePlatformCredentials`, `useTikTokOAuth`, `usePlatformDiff`, `usePlatformSnapshots`, `usePlatformTester`) orchestrated by a lightweight façade `usePlatformSync`.
+- **Platform Registry**: `src/config/platformRegistry.ts` centralizing platform definitions, sync capabilities (Official API, OAuth, Smart Import, Simulation), credentials fields, and brand colors.
+- **UI Modernization**: Upgrading `PlatformSyncTab` and `platform-sync` sub-components to be data-driven and powered by the registry.
 
 ---
 
-## ขั้นตอนการดำเนินการ (Execution Steps)
+## Proposed Changes
 
-1. **แก้ไขไฟล์ `src/components/sections/analytics/AudienceDemographicsCard.tsx`**:
-   - ปรับปรุง container ของ filter bar: `p-1.5 sm:p-2 rounded-2xl`
-   - ปรับปรุงปุ่ม "ภาพรวมทั้งหมด" (ลบ badge `เฉลี่ยถ่วงน้ำหนัก`, ใช้ข้อความ `ภาพรวมทั้งหมด`)
-   - ปรับปรุงปุ่มรายแพลตฟอร์ม: ใส่คลาส `hidden xl:inline-block` ให้กับ follower count pill
-   - ปรับปรุง typography และ padding ให้ตรงตาม Design Guidelines (`font-bold`, `text-xs`)
-2. **ตรวจสอบคุณภาพ**:
-   - รัน `lint_applet` เพื่อตรวจสอบ Typescript และ Syntax
-   - รัน `compile_applet` เพื่อทดสอบ Build ผลลัพธ์
-3. **ตรวจเช็คการแสดงผล**:
-   - ทดสอบทั้งหน้าจอขนาดกว้าง (> 1440px) และขนาดกลาง/แล็ปท็อป (1024px - 1366px) ให้มั่นใจว่าปุ่มไม่ตกบรรทัด
+### 1. Centralized Platform Registry & Types
+#### `src/types/platformSync.ts` & `src/config/platformRegistry.ts`
+- Define `PlatformDefinition` interface:
+  - `id`: PlatformStat ID (`youtube` | `tiktok` | `instagram` | `facebook` | `lemon8` | `threads` | string)
+  - `name`: Display label (e.g., "YouTube Data API v3", "TikTok Official OAuth 2.0")
+  - `brandColor`: Primary brand accent hex color
+  - `supportedMethods`: Array of supported sync engines (`['official_api', 'simulation', 'oauth', 'smart_import']`)
+  - `credentialsSchema`: Field descriptors for API keys, tokens, page IDs, etc.
+- Export `PLATFORM_REGISTRY`: The single source of truth for all supported social networks. Adding a new platform in the future only requires adding a configuration entry in this registry.
+
+---
+
+### 2. Domain Hooks Architecture (`src/hooks/platform-sync/`)
+Split the 1,175-line monolith into dedicated, focused hooks:
+
+#### `usePlatformCredentials.ts` (~120 lines)
+- Manages credentials state (`PlatformApiCredentials`)
+- LocalStorage caching (`CREDENTIALS_STORAGE_KEY`)
+- Real-time Firestore synchronization (`doc(db, 'settings', 'platformConfig')`)
+- Error-resilient update methods
+
+#### `useTikTokOAuth.ts` (~200 lines)
+- Manages TikTok OAuth 2.0 connection lifecycle (clientKey, clientSecret, token expiry, follower/likes/video count)
+- Popup window listener (`window.addEventListener('message')`) and postMessage protocol
+- Client-side base64url state generation and authorization URL builder
+- Token refresh, manual disconnect, and Firestore sync
+
+#### `usePlatformDiff.ts` (~180 lines)
+- Manages calculated diff state (`diffItems: PlatformDiffItem[] | null`)
+- Interactive toggles: `toggleDiffSelection`, `toggleSelectAll`, `clearDiff`
+- Single platform diff merging (`applySinglePlatformToDiff`)
+- Multi-timeframe profile updater (`applyDiff` calculating 28d, 60d, and Lifetime aggregates across views, likes, er)
+
+#### `usePlatformSnapshots.ts` (~110 lines)
+- Manages 5-version ring buffer history (`syncHistory: SyncSnapshotHistoryItem[]`)
+- LocalStorage persistence (`HISTORY_STORAGE_KEY`)
+- Pre-save snapshot generation
+- Reversible snapshot rollback (`rollbackToSnapshot`)
+
+#### `usePlatformTester.ts` (~120 lines)
+- Manages single-platform test loading states (`singleTestLoading`)
+- Test results storage (`singleTestResults`)
+- Execution handlers (`testSinglePlatformFn`, `clearSingleTestResult`)
+- Live sync runner (`executeSync` across all platforms)
+
+#### `index.ts` & Facade Hook (`usePlatformSync.ts`) (~90 lines)
+- Composes all 5 domain hooks into a cohesive interface.
+- Preserves the exact return signature of `usePlatformSync()`.
+- Re-exports types for full backwards compatibility.
+
+---
+
+### 3. UI Refactoring (`src/components/admin/PlatformSyncTab.tsx` & `platform-sync/`)
+- **`PlatformSyncTab.tsx`**: Clean, declarative orchestrator component using props grouped cleanly.
+- **`CredentialsGrid.tsx`**: Extracted grid component leveraging `PLATFORM_REGISTRY` to render platform cards cleanly.
+- **`platform-sync/index.ts`**: Re-export all sub-modules for clean module resolution.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+1. **Type Safety & Linting**:
+   - Run `lint_applet` (`npx tsc --noEmit`) to verify zero TypeScript errors across all newly created hooks and components.
+2. **Build Compilation**:
+   - Run `compile_applet` (`npm run build`) to ensure the Vite production bundle builds cleanly.
+
+### Manual Verification Flows
+1. **TikTok OAuth State**: Verify existing stored tokens and Firestore listeners load without disruption.
+2. **Platform Credential Editing**: Test saving API keys and verifying toast confirmation.
+3. **Single Platform Test**: Test simulated/live test trigger on YouTube and Instagram.
+4. **Diff & Apply**: Trigger diff preview, toggle selection checkboxes, and apply diff with 3-timeframe calculations.
+5. **Snapshot History & Rollback**: Confirm rollback to previous snapshot restores overview and platform stats properly.

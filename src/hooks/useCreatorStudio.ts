@@ -941,6 +941,17 @@ export function useCreatorStudio({
     setHasUnsavedChanges(true);
   }, []);
 
+  const applySmartImportCreator = useCallback(
+    (updatedCreator: CreatorProfile, toastMessage?: string) => {
+      setDraftCreator(updatedCreator);
+      setHasUnsavedChanges(true);
+      if (toastMessage) {
+        triggerToast(toastMessage);
+      }
+    },
+    [triggerToast]
+  );
+
   const updateFreePerkField = useCallback(
     (perkId: string, field: 'name' | 'priceLabel', value: string) => {
       setDraftCreator((prev) => ({
@@ -1518,6 +1529,7 @@ export function useCreatorStudio({
     copyDemographicsBetweenPlatforms,
     recalculateDemographicsWeightedAverage,
     updateDefaultDemographicView,
+    applySmartImportCreator,
     updateFreePerkField,
     addFreePerkItem,
     deleteFreePerkItem,

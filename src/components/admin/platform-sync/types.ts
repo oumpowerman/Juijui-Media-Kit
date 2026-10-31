@@ -74,6 +74,10 @@ export interface PlatformSyncTabProps {
     fetchedData: FetchedPlatformData,
     currentPlatforms: PlatformStat[]
   ) => void;
+  onApplySmartImport?: (
+    updatedCreator: CreatorProfile,
+    summaryMessage: string
+  ) => void;
 }
 
 export interface PlatformTestBoxProps {
